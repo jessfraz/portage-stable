@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -7,17 +7,24 @@ GENTOO_DEPEND_ON_PERL=no
 
 # bug #329479: git-remote-testgit is not multiple-version aware
 PYTHON_COMPAT=( python2_7 )
-[[ ${PV} == *9999 ]] && SCM="git-r3"
-# Please ensure that all _four_ 9999 ebuilds get updated; they track the 4 upstream branches.
-# See https://git-scm.com/docs/gitworkflows#_graduation
-# In order of stability:
-# 9999-r0: maint
-# 9999-r1: master
-# 9999-r2: next
-# 9999-r3: pu
-EGIT_REPO_URI="git://git.kernel.org/pub/scm/git/git.git"
-EGIT_BRANCH=maint
-PLOCALES="bg ca de fr is it ko pt_PT ru sv vi zh_CN"
+PLOCALES="bg ca de es fr is it ko pt_PT ru sv vi zh_CN"
+if [[ ${PV} == *9999 ]]; then
+	SCM="git-r3"
+	EGIT_REPO_URI="git://git.kernel.org/pub/scm/git/git.git"
+	# Please ensure that all _four_ 9999 ebuilds get updated; they track the 4 upstream branches.
+	# See https://git-scm.com/docs/gitworkflows#_graduation
+	# In order of stability:
+	# 9999-r0: maint
+	# 9999-r1: master
+	# 9999-r2: next
+	# 9999-r3: pu
+	case "${PVR}" in
+		9999) EGIT_BRANCH=maint ;;
+		9999-r1) EGIT_BRANCH=master ;;
+		9999-r2) EGIT_BRANCH=next;;
+		9999-r3) EGIT_BRANCH=pu ;;
+	esac
+fi
 
 inherit toolchain-funcs eutils elisp-common l10n perl-module bash-completion-r1 python-single-r1 systemd ${SCM}
 
@@ -43,7 +50,7 @@ fi
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="+blksha1 +curl cgi doc emacs gnome-keyring +gpg highlight +iconv libressl mediawiki mediawiki-experimental +nls +pcre +perl +python ppcsha1 tk +threads +webdav xinetd cvs subversion test"
+IUSE="+blksha1 +curl cgi doc emacs gnome-keyring +gpg highlight +iconv libressl mediawiki mediawiki-experimental +nls +pcre +pcre-jit +perl +python ppcsha1 tk +threads +webdav xinetd cvs subversion test"
 
 # Common to both DEPEND and RDEPEND
 CDEPEND="
@@ -51,7 +58,10 @@ CDEPEND="
 	!libressl? ( dev-libs/openssl:0= )
 	libressl? ( dev-libs/libressl:= )
 	sys-libs/zlib
-	pcre? ( dev-libs/libpcre )
+	pcre? (
+		pcre-jit? ( dev-libs/libpcre2[jit(+)] )
+		!pcre-jit? ( dev-libs/libpcre )
+	)
 	perl? ( dev-lang/perl:=[-build(-)] )
 	tk? ( dev-lang/tk:0= )
 	curl? (
@@ -108,6 +118,7 @@ REQUIRED_USE="
 	mediawiki-experimental? ( mediawiki )
 	subversion? ( perl )
 	webdav? ( curl )
+	pcre-jit? ( pcre )
 	python? ( ${PYTHON_REQUIRED_USE} )
 "
 
@@ -153,7 +164,7 @@ exportmakeopts() {
 		myopts+=" NO_CURL=YesPlease"
 	fi
 
-	# broken assumptions, because of broken build system ...
+	# broken assumptions, because of static build system ...
 	myopts+=" NO_FINK=YesPlease NO_DARWIN_PORTS=YesPlease"
 	myopts+=" INSTALL=install TAR=tar"
 	myopts+=" SHELL_PATH=${EPREFIX}/bin/sh"
@@ -173,9 +184,16 @@ exportmakeopts() {
 		|| myopts+=" NO_GETTEXT=YesPlease"
 	use tk \
 		|| myopts+=" NO_TCLTK=YesPlease"
-	use pcre \
-		&& myopts+=" USE_LIBPCRE=yes" \
-		&& extlibs+=" -lpcre"
+	if use pcre; then
+		if use pcre-jit; then
+			myopts+=" USE_LIBPCRE2=YesPlease"
+			extlibs+=" -lpcre2-8"
+		else
+			myopts+=" USE_LIBPCRE1=YesPlease"
+			myopts+=" NO_LIBPCRE1_JIT=YesPlease"
+			extlibs+=" -lpcre"
+		fi
+	fi
 	use perl \
 		&& myopts+=" INSTALLDIRS=vendor" \
 		|| myopts+=" NO_PERL=YesPlease"
@@ -208,7 +226,8 @@ exportmakeopts() {
 	if [[ ${CHOST} == *-solaris* ]]; then
 		myopts+=" NEEDS_LIBICONV=YesPlease"
 		myopts+=" HAVE_CLOCK_MONOTONIC=1"
-		myopts+=" HAVE_GETDELIM=1"
+		grep -q getdelim "${ROOT}"/usr/include/stdio.h && \
+			myopts+=" HAVE_GETDELIM=1"
 	fi
 
 	has_version '>=app-text/asciidoc-8.0' \
@@ -280,7 +299,6 @@ src_prepare() {
 }
 
 git_emake() {
-	# bug #326625: PERL_PATH, PERL_MM_OPT
 	# bug #320647: PYTHON_PATH
 	PYTHON_PATH=""
 	use python && PYTHON_PATH="${PYTHON}"
@@ -294,13 +312,11 @@ git_emake() {
 		htmldir="${EPREFIX}"/usr/share/doc/${PF}/html \
 		sysconfdir="${EPREFIX}"/etc \
 		PYTHON_PATH="${PYTHON_PATH}" \
+		PERL_PATH="${EPREFIX}/usr/bin/perl" \
 		PERL_MM_OPT="" \
 		GIT_TEST_OPTS="--no-color" \
 		V=1 \
 		"$@"
-	# This is the fix for bug #326625, but it also causes breakage, see bug
-	# #352693.
-	# PERL_PATH="${EPREFIX}/usr/bin/env perl" \
 }
 
 src_configure() {
@@ -556,7 +572,7 @@ src_install() {
 }
 
 src_test() {
-	local disabled=""
+	local disabled="t9128-git-svn-cmd-branch.sh"
 	local tests_cvs="t9200-git-cvsexportcommit.sh \
 					t9400-git-cvsserver-server.sh \
 					t9401-git-cvsserver-crlf.sh \

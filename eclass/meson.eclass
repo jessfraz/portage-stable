@@ -103,12 +103,13 @@ _meson_create_cross_file() {
 	# system roughly corresponds to uname -s (lowercase)
 	local system=unknown
 	case ${CHOST} in
-		*-aix*)     system=aix ;;
-		*-cygwin*)  system=cygwin ;;
-		*-darwin*)  system=darwin ;;
-		*-freebsd*) system=freebsd ;;
-		*-linux*)   system=linux ;;
-		*-solaris*) system=sunos ;;
+		*-aix*)          system=aix ;;
+		*-cygwin*)       system=cygwin ;;
+		*-darwin*)       system=darwin ;;
+		*-freebsd*)      system=freebsd ;;
+		*-linux*)        system=linux ;;
+		mingw*|*-mingw*) system=windows ;;
+		*-solaris*)      system=sunos ;;
 	esac
 
 	local cpu_family=$(tc-arch)
@@ -134,6 +135,19 @@ _meson_create_cross_file() {
 	cpu = '${cpu}'
 	endian = '$(tc-endian)'
 	EOF
+}
+
+# @FUNCTION: meson_use
+# @USAGE: <USE flag> [option name]
+# @DESCRIPTION:
+# Given a USE flag and meson project option, outputs a string like:
+#
+#   -Doption=true
+#   -Doption=false
+#
+# If the project option is unspecified, it defaults to the USE flag.
+meson_use() {
+	usex "$1" "-D${2-$1}=true" "-D${2-$1}=false"
 }
 
 # @FUNCTION: meson_src_configure

@@ -1,7 +1,7 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 #
-# @ECLASS: mozconfig-v6.52.eclass
+# @ECLASS: mozconfig-v6.57.eclass
 # @MAINTAINER:
 # mozilla team <mozilla@gentoo.org>
 # @BLURB: the new mozilla common configuration eclass for FF33 and newer, v6
@@ -89,21 +89,21 @@ inherit flag-o-matic toolchain-funcs mozcoreconf-v5
 # Set the variable to any value if the use flag should exist but not be default-enabled.
 
 # use-flags common among all mozilla ebuilds
-IUSE="${IUSE} dbus debug +jemalloc neon pulseaudio selinux startup-notification system-cairo
-	system-harfbuzz system-icu system-jpeg system-libevent system-sqlite system-libvpx"
+IUSE="${IUSE} dbus debug neon pulseaudio selinux startup-notification system-harfbuzz
+ system-icu system-jpeg system-libevent system-sqlite system-libvpx"
 
 # some notes on deps:
 # gtk:2 minimum is technically 2.10 but gio support (enabled by default) needs 2.14
 # media-libs/mesa needs to be 10.2 or above due to a bug with flash+vdpau
 
-RDEPEND=">=app-text/hunspell-1.2:=
+RDEPEND=">=app-text/hunspell-1.5.4:=
 	dev-libs/atk
 	dev-libs/expat
 	>=x11-libs/cairo-1.10[X]
 	>=x11-libs/gtk+-2.18:2
 	x11-libs/gdk-pixbuf
 	>=x11-libs/pango-1.22.0
-	>=media-libs/libpng-1.6.25:0=[apng]
+	>=media-libs/libpng-1.6.31:0=[apng]
 	>=media-libs/mesa-10.2:*
 	media-libs/fontconfig
 	>=media-libs/freetype-2.4.10
@@ -114,6 +114,7 @@ RDEPEND=">=app-text/hunspell-1.2:=
 	dbus? ( >=sys-apps/dbus-0.60
 		>=dev-libs/dbus-glib-0.72 )
 	startup-notification? ( >=x11-libs/startup-notification-0.8 )
+	>=x11-libs/pixman-0.19.2
 	>=dev-libs/glib-2.26:2
 	>=sys-libs/zlib-1.2.3
 	>=virtual/libffi-3.0.10
@@ -125,13 +126,12 @@ RDEPEND=">=app-text/hunspell-1.2:=
 	x11-libs/libXfixes
 	x11-libs/libXrender
 	x11-libs/libXt
-	system-cairo? ( >=x11-libs/cairo-1.12[X,xcb] >=x11-libs/pixman-0.19.2 )
-	system-icu? ( >=dev-libs/icu-58.1:= )
+	system-icu? ( >=dev-libs/icu-59.1:= )
 	system-jpeg? ( >=media-libs/libjpeg-turbo-1.2.1 )
 	system-libevent? ( >=dev-libs/libevent-2.0:0= )
-	system-sqlite? ( >=dev-db/sqlite-3.17.0:3[secure-delete,debug=] )
+	system-sqlite? ( >=dev-db/sqlite-3.20.1:3[secure-delete,debug=] )
 	system-libvpx? ( >=media-libs/libvpx-1.5.0:0=[postproc] )
-	system-harfbuzz? ( >=media-libs/harfbuzz-1.3.3:0= >=media-gfx/graphite2-1.3.8 )
+	system-harfbuzz? ( >=media-libs/harfbuzz-1.3.3:0= >=media-gfx/graphite2-1.3.9-r1 )
 "
 
 if [[ -n ${MOZCONFIG_OPTIONAL_GTK3} ]]; then
@@ -149,6 +149,9 @@ elif [[ -n ${MOZCONFIG_OPTIONAL_GTK2ONLY} ]]; then
 		IUSE+=" gtk2"
 	fi
 	RDEPEND+=" !gtk2? ( >=x11-libs/gtk+-3.4.0:3 )"
+else
+	# no gtk3 related dep set by optional use flags, force it
+	RDEPEND+="  >=x11-libs/gtk+-3.4.0:3"
 fi
 if [[ -n ${MOZCONFIG_OPTIONAL_WIFI} ]]; then
 	if [[ ${MOZCONFIG_OPTIONAL_WIFI} = "enabled" ]]; then
@@ -169,6 +172,8 @@ DEPEND="app-arch/zip
 	>=sys-devel/binutils-2.16.1
 	sys-apps/findutils
 	pulseaudio? ( media-sound/pulseaudio )
+	>=virtual/rust-1.19.0
+	dev-util/cargo
 	${RDEPEND}"
 
 RDEPEND+="
@@ -198,6 +203,19 @@ mozconfig_config() {
 	mozconfig_annotate 'system_libs' \
 		--with-system-zlib \
 		--with-system-bz2
+
+	# Stylo is only broken on x86 builds
+	use x86 && mozconfig_annotate 'Upstream bug 1341234' --disable-stylo
+
+	# Must pass release in order to properly select linker
+	mozconfig_annotate 'Enable by Gentoo' --enable-release
+
+	# Must pass --enable-gold if using ld.gold
+	if tc-ld-is-gold ; then
+		mozconfig_annotate 'tc-ld-is-gold=true' --enable-gold
+	else
+		mozconfig_annotate 'tc-ld-is-gold=false' --disable-gold
+	fi
 
 	if has bindist ${IUSE}; then
 		mozconfig_use_enable !bindist official-branding
@@ -247,12 +265,9 @@ mozconfig_config() {
 	mozconfig_annotate '' --prefix="${EPREFIX}"/usr
 	mozconfig_annotate '' --libdir="${EPREFIX}"/usr/$(get_libdir)
 	mozconfig_annotate 'Gentoo default' --enable-system-hunspell
-	mozconfig_annotate '' --disable-gnomeui
-	mozconfig_annotate '' --enable-gio
 	mozconfig_annotate '' --disable-crashreporter
 	mozconfig_annotate 'Gentoo default' --with-system-png
 	mozconfig_annotate '' --enable-system-ffi
-	mozconfig_annotate 'Gentoo default to honor system linker' --disable-gold
 	mozconfig_annotate '' --disable-gconf
 	mozconfig_annotate '' --with-intl-api
 
@@ -263,18 +278,18 @@ mozconfig_config() {
 		mozconfig_annotate '' --enable-skia
 	fi
 
-	# default toolkit is cairo-gtk2, optional use flags can change this
-	local toolkit="cairo-gtk2"
+	# default toolkit is cairo-gtk3, optional use flags can change this
+	local toolkit="cairo-gtk3"
 	local toolkit_comment=""
 	if [[ -n ${MOZCONFIG_OPTIONAL_GTK3} ]]; then
-		if use force-gtk3; then
-			toolkit="cairo-gtk3"
+		if ! use force-gtk3; then
+			toolkit="cairo-gtk2"
 			toolkit_comment="force-gtk3 use flag"
 		fi
 	fi
 	if [[ -n ${MOZCONFIG_OPTIONAL_GTK2ONLY} ]]; then
-		if ! use gtk2 ; then
-			toolkit="cairo-gtk3"
+		if use gtk2 ; then
+			toolkit="cairo-gtk2"
 		else
 			toolkit_comment="gtk2 use flag"
 		fi
@@ -296,14 +311,6 @@ mozconfig_config() {
 	fi
 	mozconfig_annotate "${toolkit_comment}" --enable-default-toolkit=${toolkit}
 
-	# Use jemalloc unless libc is not glibc >= 2.4
-	# at this time the minimum glibc in the tree is 2.9 so we should be safe.
-	if use elibc_glibc && use jemalloc; then
-		# We must force-enable jemalloc 4 via .mozconfig
-		echo "export MOZ_JEMALLOC4=1" >> "${S}"/.mozconfig || die
-		mozconfig_annotate '' --enable-replace-malloc
-	fi
-
 	# Instead of the standard --build= and --host=, mozilla uses --host instead
 	# of --build, and --target intstead of --host.
 	# Note, mozilla also has --build but it does not do what you think it does.
@@ -317,7 +324,9 @@ mozconfig_config() {
 		mozconfig_annotate '-pulseaudio' --enable-alsa
 	fi
 
-	mozconfig_use_enable system-cairo
+	# For testing purpose only
+	mozconfig_annotate 'Sandbox' --enable-content-sandbox
+
 	mozconfig_use_enable system-sqlite
 	mozconfig_use_with system-jpeg
 	mozconfig_use_with system-icu

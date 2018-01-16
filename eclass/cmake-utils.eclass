@@ -9,6 +9,7 @@
 # Maciej Mrozowski <reavertm@gentoo.org>
 # (undisclosed contributors)
 # Original author: Zephyrus (zephyrus@mirach.it)
+# @SUPPORTED_EAPIS: 5 6
 # @BLURB: common ebuild functions for cmake-based packages
 # @DESCRIPTION:
 # The cmake-utils eclass makes creating ebuilds for cmake-based packages much easier.
@@ -44,6 +45,7 @@ _CMAKE_UTILS_ECLASS=1
 : ${CMAKE_BUILD_TYPE:=Gentoo}
 
 # @ECLASS-VARIABLE: CMAKE_IN_SOURCE_BUILD
+# @DEFAULT_UNSET
 # @DESCRIPTION:
 # Set to enable in-source build.
 
@@ -88,12 +90,14 @@ _CMAKE_UTILS_ECLASS=1
 # "no" to disable (default) or anything else to enable.
 
 # @ECLASS-VARIABLE: CMAKE_EXTRA_CACHE_FILE
+# @DEFAULT_UNSET
 # @DESCRIPTION:
 # Specifies an extra cache file to pass to cmake. This is the analog of EXTRA_ECONF
 # for econf and is needed to pass TRY_RUN results when cross-compiling.
 # Should be set by user in a per-package basis in /etc/portage/package.env.
 
 # @ECLASS-VARIABLE: CMAKE_UTILS_QA_SRC_DIR_READONLY
+# @DEFAULT_UNSET
 # @DESCRIPTION:
 # After running cmake-utils_src_prepare, sets ${S} to read-only. This is
 # a user flag and should under _no circumstances_ be set in the ebuild.
@@ -106,7 +110,7 @@ case ${EAPI} in
 esac
 
 inherit toolchain-funcs multilib ninja-utils flag-o-matic eutils \
-	multiprocessing versionator
+	multiprocessing versionator xdg-utils
 
 EXPORT_FUNCTIONS src_prepare src_configure src_compile src_test src_install
 
@@ -487,7 +491,7 @@ cmake-utils_src_configure() {
 	_cmake_check_build_dir
 
 	# Fix xdg collision with sandbox
-	local -x XDG_CONFIG_HOME="${T}"
+	xdg_environment_reset
 
 	# @SEE CMAKE_BUILD_TYPE
 	if [[ ${CMAKE_BUILD_TYPE} = Gentoo ]]; then
@@ -582,12 +586,10 @@ cmake-utils_src_configure() {
 			ELSE ()
 
 			SET(CMAKE_PREFIX_PATH "${EPREFIX}/usr" CACHE STRING "" FORCE)
+			SET(CMAKE_MACOSX_RPATH ON CACHE BOOL "" FORCE)
 			SET(CMAKE_SKIP_BUILD_RPATH OFF CACHE BOOL "" FORCE)
 			SET(CMAKE_SKIP_RPATH OFF CACHE BOOL "" FORCE)
-			SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE CACHE BOOL "")
-			SET(CMAKE_INSTALL_RPATH "${EPREFIX}/usr/lib;${EPREFIX}/usr/${CHOST}/lib/gcc;${EPREFIX}/usr/${CHOST}/lib;${EPREFIX}/usr/$(get_libdir);${EPREFIX}/$(get_libdir)" CACHE STRING "" FORCE)
 			SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE BOOL "" FORCE)
-			SET(CMAKE_INSTALL_NAME_DIR "${EPREFIX}/usr/lib" CACHE STRING "" FORCE)
 
 			ENDIF (NOT APPLE)
 		_EOF_

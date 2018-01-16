@@ -1,45 +1,59 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=5
 
-inherit eutils toolchain-funcs flag-o-matic
+inherit epatch toolchain-funcs flag-o-matic
 
 DESCRIPTION="standard informational utilities and process-handling tools"
 HOMEPAGE="http://procps-ng.sourceforge.net/ https://gitlab.com/procps-ng/procps"
-SRC_URI="mirror://sourceforge/${PN}-ng/${PN}-ng-${PV}.tar.xz
-	https://gitlab.com/procps-ng/procps/commit/b2f49b105d23c833d733bf7dfb99cb98e4cae383.patch -> ${PN}-3.3.11-remove_Unix98_output_limits.patch"
+SRC_URI="mirror://sourceforge/${PN}-ng/${PN}-ng-${PV}.tar.xz"
 
 LICENSE="GPL-2"
 SLOT="0/5" # libprocps.so
-KEYWORDS="alpha amd64 arm ~arm64 hppa ~ia64 ~m68k ~mips ~ppc ppc64 ~s390 ~sh ~sparc x86 ~amd64-linux ~ia64-linux ~x86-linux"
-IUSE="+kill +ncurses modern-top nls selinux static-libs systemd test unicode"
+KEYWORDS="alpha amd64 arm ~arm64 hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh sparc x86 ~amd64-linux ~x86-linux"
+IUSE="elogind +kill modern-top +ncurses nls selinux static-libs systemd test unicode"
 
-RDEPEND="ncurses? ( >=sys-libs/ncurses-5.7-r7:=[unicode?] )
+COMMON_DEPEND="
+	elogind? ( sys-auth/elogind )
+	ncurses? ( >=sys-libs/ncurses-5.7-r7:=[unicode?] )
 	selinux? ( sys-libs/libselinux )
-	systemd? ( >=sys-apps/systemd-209 )"
-DEPEND="${RDEPEND}
+	systemd? ( sys-apps/systemd )
+"
+DEPEND="${COMMON_DEPEND}
+	elogind? ( virtual/pkgconfig )
 	ncurses? ( virtual/pkgconfig )
 	systemd? ( virtual/pkgconfig )
 	test? ( dev-util/dejagnu )"
-RDEPEND+="
+RDEPEND="
+	${COMMON_DEPEND}
 	kill? (
 		!sys-apps/coreutils[kill]
 		!sys-apps/util-linux[kill]
 	)
-	!<sys-apps/sysvinit-2.88-r6"
+	!<sys-apps/sysvinit-2.88-r6
+"
 
 S="${WORKDIR}/${PN}-ng-${PV}"
 
 PATCHES=(
 	"${FILESDIR}"/${PN}-3.3.8-kill-neg-pid.patch # http://crbug.com/255209
-	"${DISTDIR}"/${P}-remove_Unix98_output_limits.patch # 555200
-	"${FILESDIR}"/${P}-sysctl-manpage.patch # 565304
+	"${FILESDIR}"/${PN}-3.3.11-sysctl-manpage.patch # 565304
+	"${FILESDIR}"/${PN}-3.3.12-proc-tests.patch # 583036
+
+	# Upstream fixes
+	"${FILESDIR}"/${P}-strtod_nol_err.patch
 )
 
 src_prepare() {
 	epatch "${PATCHES[@]}"
+
+	# Requires special handling or autoreconf gets triggered which we don't
+	# want to happen in a base-system package.
+	EPATCH_OPTS="-Z" \
+	epatch "${FILESDIR}"/${PN}-3.3.12-elogind.patch # 599504
+
+	epatch_user
 }
 
 src_configure() {
@@ -47,6 +61,7 @@ src_configure() {
 	append-lfs-flags #471102
 	econf \
 		--docdir='$(datarootdir)'/doc/${PF} \
+		$(use_with elogind) \
 		$(use_enable kill) \
 		$(use_enable modern-top) \
 		$(use_with ncurses) \
@@ -72,5 +87,5 @@ src_install() {
 	fi
 
 	gen_usr_ldscript -a procps
-	prune_libtool_files
+	find "${D}" -name '*.la' -delete || die
 }

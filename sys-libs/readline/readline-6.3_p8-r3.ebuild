@@ -1,8 +1,7 @@
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=4
+EAPI=5
 
 inherit eutils multilib toolchain-funcs flag-o-matic multilib-minimal
 
@@ -34,10 +33,10 @@ SRC_URI="mirror://gnu/${PN}/${MY_P}.tar.gz $(patches)"
 
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux"
-IUSE="static-libs"
+KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux"
+IUSE="static-libs utils"
 
-RDEPEND=">=sys-libs/ncurses-5.9-r3[${MULTILIB_USEDEP}]
+RDEPEND=">=sys-libs/ncurses-5.9-r3:0=[${MULTILIB_USEDEP}]
 	abi_x86_32? (
 		!app-emulation/emul-linux-x86-baselibs[-abi_x86_32(-)]
 		!<=app-emulation/emul-linux-x86-baselibs-20131008-r7
@@ -47,15 +46,20 @@ DEPEND="${RDEPEND}
 
 S=${WORKDIR}/${MY_P}
 
+PATCHES=(
+	"${FILESDIR}"/${PN}-5.0-no_rpath.patch
+	"${FILESDIR}"/${PN}-6.2-rlfe-tgoto.patch #385091
+	"${FILESDIR}"/${PN}-6.3-fix-long-prompt-vi-search.patch
+	"${FILESDIR}"/${PN}-6.3-read-eof.patch
+)
+
 src_unpack() {
 	unpack ${MY_P}.tar.gz
 }
 
 src_prepare() {
 	[[ ${PLEVEL} -gt 0 ]] && epatch $(patches -s)
-	epatch "${FILESDIR}"/${PN}-5.0-no_rpath.patch
-	epatch "${FILESDIR}"/${PN}-6.2-rlfe-tgoto.patch #385091
-	epatch "${FILESDIR}"/${PN}-6.3-fix-long-prompt-vi-search.patch
+	epatch "${PATCHES[@]}"
 
 	# Force ncurses linking. #71420
 	# Use pkg-config to get the right values. #457558
@@ -106,11 +110,11 @@ multilib_src_configure() {
 	ECONF_SOURCE=${S} \
 	econf \
 		--cache-file="${BUILD_DIR}"/config.cache \
-		--docdir=/usr/share/doc/${PF} \
+		--docdir='$(datarootdir)'/doc/${PF} \
 		--with-curses \
 		$(use_enable static-libs static)
 
-	if multilib_is_native_abi && ! tc-is-cross-compiler ; then
+	if use utils && multilib_is_native_abi && ! tc-is-cross-compiler ; then
 		# code is full of AC_TRY_RUN()
 		mkdir -p examples/rlfe || die
 		cd examples/rlfe || die
@@ -122,7 +126,7 @@ multilib_src_configure() {
 multilib_src_compile() {
 	emake
 
-	if multilib_is_native_abi && ! tc-is-cross-compiler ; then
+	if use utils && multilib_is_native_abi && ! tc-is-cross-compiler ; then
 		# code is full of AC_TRY_RUN()
 		cd examples/rlfe || die
 		local l
@@ -140,7 +144,7 @@ multilib_src_install() {
 	if multilib_is_native_abi ; then
 		gen_usr_ldscript -a readline history #4411
 
-		if ! tc-is-cross-compiler; then
+		if use utils && ! tc-is-cross-compiler; then
 			dobin examples/rlfe/rlfe
 		fi
 	fi

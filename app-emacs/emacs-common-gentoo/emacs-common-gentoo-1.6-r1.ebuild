@@ -1,10 +1,9 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
+EAPI=6
 
-inherit elisp-common eutils fdo-mime gnome2-utils readme.gentoo user
+inherit elisp-common eutils xdg-utils gnome2-utils readme.gentoo-r1 user
 
 DESCRIPTION="Common files needed by all GNU Emacs versions"
 HOMEPAGE="https://wiki.gentoo.org/wiki/Project:Emacs"
@@ -12,7 +11,7 @@ SRC_URI="https://dev.gentoo.org/~ulm/emacs/${P}.tar.xz"
 
 LICENSE="GPL-3+"
 SLOT="0"
-KEYWORDS="alpha amd64 arm hppa ia64 ~mips ppc ppc64 ~s390 ~sh sparc x86 ~amd64-fbsd ~x86-fbsd ~x86-freebsd ~amd64-linux ~ia64-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~sparc-solaris ~x86-solaris"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~sparc-solaris ~x86-solaris"
 IUSE="games X"
 
 PDEPEND="virtual/emacs"
@@ -42,15 +41,14 @@ src_install() {
 
 		pushd icons || die
 		newicon sink.png emacs-sink.png
-		newicon emacs_48.png emacs.png
-		newicon emacs22_48.png emacs22.png
+		newicon emacs25_48.png emacs.png
 		for i in 16 24 32 48 128; do
-			newicon -s ${i} emacs_${i}.png emacs.png
+			[[ ${i} -le 48 ]] && newicon -s ${i} emacs22_${i}.png emacs22.png
+			newicon -s ${i} emacs23_${i}.png emacs23.png
+			newicon -s ${i} emacs25_${i}.png emacs.png
 		done
-		for i in 16 24 32 48; do
-			newicon -s ${i} emacs22_${i}.png emacs22.png
-		done
-		doicon -s scalable emacs.svg
+		doicon -s scalable emacs23.svg
+		newicon -s scalable emacs25.svg emacs.svg
 		popd
 
 		gnome2_icon_savelist
@@ -101,7 +99,7 @@ pkg_preinst() {
 
 pkg_postinst() {
 	if use X; then
-		fdo-mime_desktop_database_update
+		xdg_desktop_database_update
 		gnome2_icon_cache_update
 	fi
 	readme.gentoo_print_elog
@@ -109,7 +107,7 @@ pkg_postinst() {
 
 pkg_postrm() {
 	if use X; then
-		fdo-mime_desktop_database_update
+		xdg_desktop_database_update
 		gnome2_icon_cache_update
 	fi
 }

@@ -1,35 +1,33 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=5
 
-inherit eutils flag-o-matic toolchain-funcs pam autotools user git-r3
+inherit autotools eutils flag-o-matic pam toolchain-funcs user
 
 DESCRIPTION="screen manager with VT100/ANSI terminal emulation"
 HOMEPAGE="https://www.gnu.org/software/screen/"
-EGIT_REPO_URI="https://git.savannah.gnu.org/git/screen.git"
-EGIT_CHECKOUT_DIR="${WORKDIR}/${P}" # needed for setting S later on
+SRC_URI="mirror://gnu/${PN}/${P}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS=""
-IUSE="debug nethack pam selinux multiuser utmp"
+KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+IUSE="debug nethack pam selinux multiuser"
 
 CDEPEND="
 	>=sys-libs/ncurses-5.2:0=
 	pam? ( virtual/pam )"
 RDEPEND="${CDEPEND}
-	selinux? ( sec-policy/selinux-screen )
-	utmp? (
-		kernel_linux? ( sys-libs/libutempter )
-		kernel_FreeBSD? ( || ( >=sys-freebsd/freebsd-lib-9.0 sys-libs/libutempter ) )
-	)
-"
+	selinux? ( sec-policy/selinux-screen )"
 DEPEND="${CDEPEND}
 	sys-apps/texinfo"
 
-RESTRICT="test"
-S="${WORKDIR}"/${P}/src
+# Patches:
+# - Don't use utempter even if it is found on the system.
+PATCHES=(
+	"${FILESDIR}"/${PN}-4.3.0-no-utempter.patch
+	"${FILESDIR}"/${P}-utmp-musl.patch
+)
 
 pkg_setup() {
 	# Make sure utmp group exists, as it's used later on.
@@ -37,14 +35,12 @@ pkg_setup() {
 }
 
 src_prepare() {
-	default
+	# Apply patches.
+	epatch "${PATCHES[@]}"
 
 	# sched.h is a system header and causes problems with some C libraries
 	mv sched.h _sched.h || die
-	sed -i \
-		-e '/include/ s:sched.h:_sched.h:' \
-		screen.h winmsg.c canvas.h sched.c || die
-	sed -i -e 's:sched.h:_sched.h:g' Makefile.in || die
+	sed -i '/include/ s:sched.h:_sched.h:' screen.h || die
 
 	# Fix manpage.
 	sed -i \
@@ -52,9 +48,13 @@ src_prepare() {
 		-e "s:/usr/local/screens:${EPREFIX}/tmp/screen:g" \
 		-e "s:/local/etc/screenrc:${EPREFIX}/etc/screenrc:g" \
 		-e "s:/etc/utmp:${EPREFIX}/var/run/utmp:g" \
-		-e "s:/local/screens/S-:${EPREFIX}/tmp/screen/S-:g" \
+		-e "s:/local/screens/S\\\-:${EPREFIX}/tmp/screen/S\\\-:g" \
 		doc/screen.1 \
 		|| die
+
+	if [[ ${CHOST} == *-darwin* ]] ; then
+		sed -i -e '/^#define UTMPOK/s/define/undef/' acconfig.h || die
+	fi
 
 	# reconfigure
 	eautoreconf
@@ -63,23 +63,29 @@ src_prepare() {
 src_configure() {
 	append-cppflags "-DMAXWIN=${MAX_SCREEN_WINDOWS:-100}"
 
-	[[ ${CHOST} == *-solaris* ]] && append-libs -lsocket -lnsl
+	if [[ ${CHOST} == *-solaris* ]] ; then
+		# enable msg_header by upping the feature standard compatible
+		# with c99 mode
+		append-cppflags -D_XOPEN_SOURCE=600
+	fi
 
 	use nethack || append-cppflags "-DNONETHACK"
 	use debug && append-cppflags "-DDEBUG"
 
 	econf \
-		--enable-socket-dir="${EPREFIX}/tmp/screen" \
-		--with-system_screenrc="${EPREFIX}/etc/screenrc" \
+		--with-socket-dir="${EPREFIX}/tmp/screen" \
+		--with-sys-screenrc="${EPREFIX}/etc/screenrc" \
 		--with-pty-mode=0620 \
 		--with-pty-group=5 \
+		--enable-rxvt_osc \
 		--enable-telnet \
-		$(use_enable pam) \
-		$(use_enable utmp)
+		--enable-colors256 \
+		$(use_enable pam)
 }
 
 src_compile() {
 	LC_ALL=POSIX emake comm.h term.h
+	emake osdef.h
 
 	emake -C doc screen.info
 	default
@@ -104,7 +110,7 @@ src_install() {
 
 	dodir /etc/tmpfiles.d
 	echo "d /tmp/screen ${tmpfiles_perms} root ${tmpfiles_group}" \
-		>"${ED}"/etc/tmpfiles.d/screen.conf
+		> "${ED}"/etc/tmpfiles.d/screen.conf
 
 	insinto /usr/share/screen
 	doins terminfo/{screencap,screeninfo.src}
@@ -116,7 +122,7 @@ src_install() {
 	pamd_mimic_system screen auth
 
 	dodoc \
-		README ChangeLog INSTALL TODO NEWS* \
+		README ChangeLog INSTALL TODO NEWS* patchlevel.h \
 		doc/{FAQ,README.DOTSCREEN,fdpat.ps,window_to_display.ps}
 
 	doman doc/screen.1
@@ -144,5 +150,5 @@ pkg_postinst() {
 		chgrp ${tmpfiles_group} "${rundir}"
 	fi
 
-	ewarn "This revision changes the screen socket location to /run/screen."
+	ewarn "This revision changes the screen socket location to ${rundir}"
 }

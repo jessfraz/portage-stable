@@ -3,17 +3,15 @@
 
 EAPI=6
 
-inherit autotools git-r3 flag-o-matic versionator
+inherit autotools flag-o-matic versionator
 
 DESCRIPTION="Terminal multiplexer"
 HOMEPAGE="http://tmux.github.io/"
-SRC_URI="https://raw.githubusercontent.com/przepompownia/tmux-bash-completion/678a27616b70c649c6701cae9cd8c92b58cc051b/completions/tmux -> tmux-bash-completion-678a27616b70c649c6701cae9cd8c92b58cc051b
-vim-syntax? ( https://raw.githubusercontent.com/keith/tmux.vim/95f6126c187667cc7f9c573c45c3b356cf69f4ca/syntax/tmux.vim -> tmux.vim-95f6126c187667cc7f9c573c45c3b356cf69f4ca )"
-EGIT_REPO_URI="https://github.com/tmux/tmux.git"
+SRC_URI="https://github.com/${PN}/${PN}/releases/download/${PV/_*}/${P/_/-}.tar.gz"
 
 LICENSE="ISC"
 SLOT="0"
-KEYWORDS=""
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos"
 IUSE="debug selinux utempter vim-syntax kernel_FreeBSD kernel_linux"
 
 CDEPEND="
@@ -36,14 +34,14 @@ RDEPEND="
 			app-editors/vim
 			app-editors/gvim
 		)
+		app-vim/vim-tmux
 	)"
 
-DOCS=( CHANGES README TODO )
+DOCS=( CHANGES FAQ README TODO example_tmux.conf )
 
 PATCHES=(
-	"${FILESDIR}/${PN}-2.4-flags.patch"
-
 	# usptream fixes (can be removed with next version bump)
+	"${FILESDIR}/${PN}-2.4-flags.patch"
 )
 
 S="${WORKDIR}/${P/_/-}"
@@ -54,7 +52,7 @@ src_prepare() {
 	replace-flags -Os -O2
 
 	# regenerate aclocal.m4 to support earlier automake versions
-	rm -f aclocal.m4 || die
+	rm -v aclocal.m4 || die
 
 	default
 	eautoreconf
@@ -68,15 +66,6 @@ src_configure() {
 	)
 
 	econf "${myeconfargs[@]}"
-}
-
-src_install() {
-	default
-
-	einstalldocs
-
-	dodoc example_tmux.conf
-	docompress -x /usr/share/doc/${PF}/example_tmux.conf
 }
 
 pkg_postinst() {

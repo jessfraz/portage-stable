@@ -37,20 +37,21 @@ SRC_URI+=" mirror://kernel/linux/kernel/v${LINUX_V}/${LINUX_SOURCES}"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~amd64 ~arm ~ppc ~x86"
+KEYWORDS="~amd64 ~arm ~ppc ~x86 ~amd64-linux ~x86-linux"
 IUSE="audit debug +demangle +doc gtk numa perl python slang unwind"
 REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 
 RDEPEND="audit? ( sys-process/audit )
-	demangle? ( sys-devel/binutils:= )
+	demangle? ( sys-libs/binutils-libs:= )
 	gtk? ( x11-libs/gtk+:2 )
 	numa? ( sys-process/numactl )
 	perl? ( dev-lang/perl )
+	python? ( ${PYTHON_DEPS} )
 	slang? ( dev-libs/newt )
 	unwind? ( sys-libs/libunwind )
 	dev-libs/elfutils"
 DEPEND="${RDEPEND}
-	>=sys-kernel/linux-headers-4.4
+	>=sys-kernel/linux-headers-4.9
 	${LINUX_PATCH+dev-util/patchutils}
 	sys-devel/bison
 	sys-devel/flex
@@ -59,8 +60,7 @@ DEPEND="${RDEPEND}
 		app-text/sgml-common
 		app-text/xmlto
 		sys-process/time
-	)
-	python? ( ${PYTHON_DEPS} )"
+	)"
 
 S_K="${WORKDIR}/linux-${LINUX_VER}"
 S="${S_K}/tools/perf"
@@ -112,7 +112,9 @@ src_prepare() {
 	sed -i \
 		-e "s:\$(sysconfdir_SQ)/bash_completion.d:$(get_bashcompdir):" \
 		"${S}"/Makefile.perf || die
-	sed -i -e 's:-Werror::' "${S_K}"/tools/lib/api/Makefile || die
+	# A few places still use -Werror w/out $(WERROR) protection.
+	sed -i -e 's:-Werror::' \
+		"${S}"/Makefile.perf "${S_K}"/tools/lib/bpf/Makefile || die
 
 	# Avoid the call to make kernelversion
 	echo "#define PERF_VERSION \"${MY_PV}\"" > PERF-VERSION-FILE
@@ -131,7 +133,7 @@ perf_make() {
 	local arch=$(tc-arch-kernel)
 	emake V=1 \
 		CC="$(tc-getCC)" AR="$(tc-getAR)" LD="$(tc-getLD)" \
-		prefix="/usr" bindir_relative="bin" \
+		prefix="${EPREFIX}/usr" bindir_relative="bin" \
 		EXTRA_CFLAGS="${CFLAGS}" \
 		ARCH="${arch}" \
 		NO_DEMANGLE=$(puse demangle) \

@@ -1,8 +1,7 @@
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
+EAPI="5"
 
 PLOCALES='fr'
 
@@ -14,8 +13,8 @@ MIN_PV=${MIN_PVE/b/B}
 
 MY_P="$PN-$MIN_PV.$MAJ_PV"
 DESCRIPTION="Hardware Lister"
-HOMEPAGE="http://ezix.org/project/wiki/HardwareLiSter"
-SRC_URI="http://ezix.org/software/files/${MY_P}.tar.gz"
+HOMEPAGE="https://www.ezix.org/project/wiki/HardwareLiSter"
+SRC_URI="https://www.ezix.org/software/files/${MY_P}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
@@ -34,29 +33,41 @@ RDEPEND="${RDEPEND}
 
 S=${WORKDIR}/${MY_P}
 
+PATCHES=(
+	"${FILESDIR}"/${PN}-02.18b-gentoo.patch
+	"${FILESDIR}"/${PN}-02.18b-gettext-array.patch
+	"${FILESDIR}"/${PN}-02.18b-sgx.patch
+)
+
 src_prepare() {
-	epatch \
-		"${FILESDIR}"/${P}-gentoo.patch \
-		"${FILESDIR}"/${P}-fat.patch \
-		"${FILESDIR}"/${P}-musl.patch
+	epatch "${PATCHES[@]}"
 
 	l10n_find_plocales_changes "src/po" "" ".po" || die
 	sed -i \
 		-e "/^LANGUAGES =/ s/=.*/= $(l10n_get_locales)/" \
 		src/po/Makefile || die
+	sed -i \
+		-e 's:\<pkg-config\>:${PKG_CONFIG}:' \
+		src/Makefile src/gui/Makefile || die
 }
 
 src_compile() {
-	tc-export CC CXX AR
+	tc-export CC CXX AR PKG_CONFIG
 	use static && append-ldflags -static
 
-	emake SQLITE=$(usex sqlite 1 0) all $(usex gtk 'gui' '')
+	# Need two sep make statements to avoid parallel build issues. #588174
+	local sqlite=$(usex sqlite 1 0)
+	emake SQLITE=${sqlite} all
+	use gtk && emake SQLITE=${sqlite} gui
 }
 
 src_install() {
 	emake DESTDIR="${D}" PREFIX="${EPREFIX}/usr" install $(usex gtk 'install-gui' '')
-	dodoc README docs/*
+	dodoc README.md docs/*
 	if use gtk ; then
-		make_desktop_entry /usr/sbin/gtk-lshw "Hardware Lister" "/usr/share/lshw/artwork/logo.svg"
+		newicon -s scalable src/gui/artwork/logo.svg gtk-lshw.svg
+		make_desktop_entry \
+			"${EPREFIX}"/usr/sbin/gtk-lshw \
+			"${DESCRIPTION}"
 	fi
 }

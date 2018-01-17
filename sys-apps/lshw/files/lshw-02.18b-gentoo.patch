@@ -1,5 +1,5 @@
---- lshw-B.02.17.orig/src/Makefile
-+++ lshw-B.02.17/src/Makefile
+--- lshw-B.02.18/src/Makefile
++++ lshw-B.02.18/src/Makefile
 @@ -21,11 +21,11 @@
  CXX?=c++
  INCLUDES=-I./core/
@@ -72,7 +72,7 @@
  install-gui: gui
  	$(INSTALL) -d -m 0755 $(DESTDIR)/$(SBINDIR)
 @@ -112,8 +108,8 @@
- 	
+ 
  clean:
  	rm -f $(PACKAGENAME).o $(PACKAGENAME) $(PACKAGENAME)-static $(PACKAGENAME)-compressed
 -	make -C core clean
@@ -82,8 +82,8 @@
  
  .timestamp:
  	date --utc +%Y%m%d%H%M%S > $@
---- lshw-B.02.17.orig/src/core/Makefile
-+++ lshw-B.02.17/src/core/Makefile
+--- lshw-B.02.18/src/core/Makefile
++++ lshw-B.02.18/src/core/Makefile
 @@ -1,10 +1,9 @@
  PACKAGENAME?=lshw
  
@@ -97,8 +97,8 @@
  LDSTATIC=
  LIBS=
  
---- lshw-B.02.17.orig/src/core/pci.cc
-+++ lshw-B.02.17/src/core/pci.cc
+--- lshw-B.02.18/src/core/pci.cc
++++ lshw-B.02.18/src/core/pci.cc
 @@ -17,7 +17,7 @@
  
  #define PROC_BUS_PCI "/proc/bus/pci"
@@ -108,8 +108,8 @@
  
  #define PCI_CLASS_REVISION      0x08              /* High 24 bits are class, low 8 revision */
  #define PCI_VENDOR_ID           0x00    /* 16 bits */
---- lshw-B.02.17.orig/src/core/usb.cc
-+++ lshw-B.02.17/src/core/usb.cc
+--- lshw-B.02.18/src/core/usb.cc
++++ lshw-B.02.18/src/core/usb.cc
 @@ -27,7 +27,7 @@
  
  #define PROCBUSUSBDEVICES "/proc/bus/usb/devices"
@@ -119,8 +119,8 @@
  
  #define USB_CLASS_PER_INTERFACE         0         /* for DeviceClass */
  #define USB_CLASS_AUDIO                 1
---- lshw-B.02.17.orig/src/gui/Makefile
-+++ lshw-B.02.17/src/gui/Makefile
+--- lshw-B.02.18/src/gui/Makefile
++++ lshw-B.02.18/src/gui/Makefile
 @@ -1,5 +1,7 @@
  PACKAGENAME?=lshw
  
@@ -129,7 +129,7 @@
  CXX?=c++
  CC?=cc
  STRIP?=strip
-@@ -8,13 +10,14 @@
+@@ -8,14 +10,15 @@
  DEFINES=-DPREFIX=\"$(PREFIX)\" -DSBINDIR=\"$(SBINDIR)\" -DMANDIR=\"$(MANDIR)\" -DDATADIR=\"$(DATADIR)\"
  GTKINCLUDES=$(shell pkg-config gtk+-2.0 --cflags)
  INCLUDES=-I../core $(GTKINCLUDES)
@@ -137,18 +137,20 @@
 +CXXFLAGS += -Wall $(INCLUDES) $(DEFINES) $(RPM_OPT_FLAGS)
  CFLAGS=$(CXXFLAGS) $(DEFINES)
  GTKLIBS=$(shell pkg-config gtk+-2.0 gmodule-2.0 --libs)
--LIBS=-L../core -llshw -lresolv -lsqlite3 $(GTKLIBS)
+-LIBS=-L../core -llshw -lresolv $(GTKLIBS)
 -LDFLAGS=
 -ifneq ($(shell $(LD) --help 2| grep -- --as-needed), )
 -	LDFLAGS+= -Wl,--as-needed
+-endif
 +LIBS=-L../core -llshw -lresolv $(GTKLIBS)
 +
 +ifeq ($(SQLITE), 1)
 +	CXXFLAGS+= -DSQLITE $(shell pkg-config --cflags sqlite3)
 +	LIBS+= $(shell pkg-config --libs sqlite3)
- endif
++endif
  
  OBJS = gtk-lshw.o callbacks.o engine.o print-gui.o stock.o
+ SRCS = $(OBJS:.o=.c)
 @@ -39,7 +42,6 @@
  	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
  

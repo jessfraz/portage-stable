@@ -1,7 +1,7 @@
 # Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="4"
+EAPI="5"
 
 inherit eutils toolchain-funcs multilib
 
@@ -11,12 +11,11 @@ SRC_URI="mirror://gnu/gawk/${P}.tar.xz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~ppc-aix ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
-IUSE="nls readline"
+KEYWORDS="alpha amd64 arm ~arm64 hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh sparc x86 ~ppc-aix ~x64-cygwin ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+IUSE="mpfr nls readline"
 
-# older gawk's provided shared lib for baselayout-1
-RDEPEND="!<sys-apps/baselayout-2.0.1
-	readline? ( sys-libs/readline )"
+RDEPEND="mpfr? ( dev-libs/mpfr:0= )
+	readline? ( sys-libs/readline:0= )"
 DEPEND="${RDEPEND}
 	nls? ( sys-devel/gettext )"
 
@@ -25,30 +24,37 @@ src_prepare() {
 	sed -i \
 		-e '/^LN =/s:=.*:= $(LN_S):' \
 		-e '/install-exec-hook:/s|$|\nfoo:|' \
-		Makefile.in doc/Makefile.in
+		Makefile.in doc/Makefile.in || die
 	sed -i '/^pty1:$/s|$|\n_pty1:|' test/Makefile.in #413327
+	# disable pointless build time hack that breaks cross-compiling #493362
+	sed -i \
+		-e '/check-recursive all-recursive: check-for-shared-lib-support/d' \
+		extension/Makefile.in || die
+	# fix standards conflict on Solaris
+	if [[ ${CHOST} == *-solaris* ]] ; then
+		sed -i \
+			-e '/\<_XOPEN_SOURCE\>/s/$/600/' \
+			extension/inplace.c || die
+	fi
 }
 
 src_configure() {
 	export ac_cv_libsigsegv=no
 	econf \
 		--libexec='$(libdir)/misc' \
+		$(use_with mpfr) \
 		$(use_enable nls) \
 		$(use_with readline)
 }
 
 src_install() {
-	emake install DESTDIR="${D}" || die
+	rm -rf README_d # automatic dodocs barfs
+	default
 
 	# Install headers
 	insinto /usr/include/awk
 	doins *.h || die
 	rm "${ED}"/usr/include/awk/config.h || die
-
-	dodoc AUTHORS ChangeLog FUTURES LIMITATIONS NEWS PROBLEMS POSIX.STD README README_d/*.*
-	for x in */ChangeLog ; do
-		newdoc ${x} ${x##*/}.${x%%/*}
-	done
 }
 
 pkg_postinst() {

@@ -1,8 +1,7 @@
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="4"
-
+EAPI=6
 inherit autotools eutils
 
 DESCRIPTION="Create, destroy, resize, check, copy partitions and file systems"
@@ -11,7 +10,7 @@ SRC_URI="mirror://gnu/${PN}/${P}.tar.xz"
 
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS="alpha amd64 arm hppa ia64 ~mips ppc ppc64 s390 ~sh sparc x86"
+KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86"
 IUSE="+debug device-mapper nls readline selinux static-libs test"
 
 # specific version for gettext needed
@@ -32,8 +31,17 @@ DEPEND="
 		dev-perl/Digest-CRC
 	)
 "
+PATCHES=(
+	"${FILESDIR}"/${PN}-3.1-zfs.patch
+	"${FILESDIR}"/${PN}-3.1-readline.patch
+)
+DOCS=(
+	AUTHORS BUGS ChangeLog NEWS README THANKS TODO doc/{API,FAT,USER.jp}
+)
 
 src_prepare() {
+	default
+
 	# Remove tests known to FAIL instead of SKIP without OS/userland support
 	sed -i libparted/tests/Makefile.am \
 		-e 's|t3000-symlink.sh||g' || die "sed failed"
@@ -44,9 +52,6 @@ src_prepare() {
 	# there is no configure flag for controlling the dev-libs/check test
 	sed -i configure.ac \
 		-e "s:have_check=[a-z]*:have_check=$(usex test):g" || die
-
-	epatch "${FILESDIR}"/${PN}-3.1-zfs.patch
-	epatch "${FILESDIR}"/${PN}-3.1-readline.patch
 
 	eautoreconf
 }
@@ -74,8 +79,7 @@ src_test() {
 }
 
 src_install() {
-	emake install DESTDIR="${D}"
-	dodoc AUTHORS BUGS ChangeLog NEWS README THANKS TODO
-	dodoc doc/{API,FAT,USER.jp}
-	find "${ED}" -name '*.la' -exec rm -f {} +
+	default
+
+	prune_libtool_files
 }

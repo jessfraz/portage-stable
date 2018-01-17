@@ -1,12 +1,12 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
-inherit eutils flag-o-matic
+EAPI=6
+inherit eutils flag-o-matic user
 
-DESCRIPTION="Network performance benchmark including tests for TCP, UDP, sockets, ATM and more"
+DESCRIPTION="Network performance benchmark"
 SRC_URI="ftp://ftp.netperf.org/${PN}/${P}.tar.bz2"
-KEYWORDS="~alpha ~amd64 ~arm64 ~hppa ~ia64 ~ppc ~ppc64 ~sparc ~x86"
+KEYWORDS="alpha amd64 ~arm64 hppa ia64 ppc ppc64 sparc x86"
 
 HOMEPAGE="http://www.netperf.org/"
 LICENSE="netperf"
@@ -15,11 +15,17 @@ IUSE="demo sctp"
 
 DEPEND=">=sys-apps/sed-4"
 
+pkg_setup() {
+	enewuser netperf
+	enewgroup netperf
+}
+
 src_prepare() {
-	epatch \
+	eapply \
 		"${FILESDIR}"/${PN}-fix-scripts.patch \
 		"${FILESDIR}"/${PN}-2.6.0-log-dir.patch \
-		"${FILESDIR}"/${PN}-2.7.0-includes.patch
+		"${FILESDIR}"/${PN}-2.7.0-includes.patch \
+		"${FILESDIR}"/${PN}-2.7.0-space.patch
 
 	# Fixing paths in scripts
 	sed -i \
@@ -35,6 +41,8 @@ src_prepare() {
 	# netlib.c:2292:5: warning: implicit declaration of function ‘sched_setaffinity’
 	# nettest_omni.c:2943:5: warning: implicit declaration of function ‘splice’
 	append-cppflags -D_GNU_SOURCE
+
+	eapply_user
 }
 
 src_configure() {
@@ -52,8 +60,12 @@ src_install () {
 	mv "${D}"/usr/{bin,sbin}/netserver || die
 
 	# init.d / conf.d
-	newinitd "${FILESDIR}"/${PN}-2.2-init netperf
+	newinitd "${FILESDIR}"/${PN}-2.7.0-init netperf
 	newconfd "${FILESDIR}"/${PN}-2.2-conf netperf
+
+	keepdir /var/log/${PN}
+	fowners netperf:netperf /var/log/${PN}
+	fperms 0755 /var/log/${PN}
 
 	# documentation and example scripts
 	dodoc AUTHORS ChangeLog NEWS README Release_Notes

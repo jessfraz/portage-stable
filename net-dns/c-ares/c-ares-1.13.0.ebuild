@@ -1,6 +1,5 @@
 # Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=6
 
@@ -24,7 +23,7 @@ MULTILIB_WRAPPED_HEADERS=(
 )
 
 src_prepare() {
-	eapply "${FILESDIR}"/${P}-remove-tests.patch
+	eapply "${FILESDIR}"/${PN}-1.12.0-remove-tests.patch
 	eapply_user
 	eautoreconf
 }

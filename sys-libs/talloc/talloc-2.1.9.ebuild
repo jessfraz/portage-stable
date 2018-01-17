@@ -1,8 +1,7 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
+EAPI=6
 
 PYTHON_COMPAT=( python2_7 )
 PYTHON_REQ_USE="threads"
@@ -10,22 +9,18 @@ PYTHON_REQ_USE="threads"
 inherit waf-utils python-single-r1 multilib multilib-minimal
 
 DESCRIPTION="Samba talloc library"
-HOMEPAGE="http://talloc.samba.org/"
-SRC_URI="http://samba.org/ftp/${PN}/${P}.tar.gz"
+HOMEPAGE="https://talloc.samba.org/"
+SRC_URI="https://www.samba.org/ftp/${PN}/${P}.tar.gz"
 
-LICENSE="GPL-3 LGPL-3+ LGPL-2 BSD"
+LICENSE="GPL-3 LGPL-3+ LGPL-2"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~x64-macos ~sparc-solaris"
+KEYWORDS="alpha amd64 ~arm ~arm64 ~hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh sparc x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~x64-macos ~sparc-solaris"
 IUSE="compat +python"
 
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
 RDEPEND="python? ( ${PYTHON_DEPS} )
-	!!<sys-libs/talloc-2.0.5
-	abi_x86_32? (
-		!<=app-emulation/emul-linux-x86-baselibs-20140508-r1
-		!app-emulation/emul-linux-x86-baselibs[-abi_x86_32(-)]
-	)"
+	!!<sys-libs/talloc-2.0.5"
 DEPEND="${RDEPEND}
 	sys-devel/gettext
 	dev-libs/libxslt
@@ -49,6 +44,8 @@ pkg_setup() {
 }
 
 src_prepare() {
+	default
+
 	# what would you expect of waf? i won't even waste time trying.
 	multilib_copy_sources
 }

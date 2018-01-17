@@ -1,13 +1,13 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="5"
+EAPI=6
 
-inherit eutils toolchain-funcs flag-o-matic multilib
+inherit toolchain-funcs flag-o-matic multilib
 
 if [[ ${PV} == "9999" ]] ; then
 	EGIT_REPO_URI="git://git.kernel.org/pub/scm/linux/kernel/git/shemminger/iproute2.git"
-	inherit git-2
+	inherit git-r3
 else
 	SRC_URI="mirror://kernel/linux/utils/net/${PN}/${P}.tar.xz"
 	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86"
@@ -21,33 +21,39 @@ SLOT="0"
 IUSE="atm berkdb +iptables ipv6 minimal selinux"
 
 # We could make libmnl optional, but it's tiny, so eh
-RDEPEND="!net-misc/arpd
+RDEPEND="
+	!net-misc/arpd
 	!minimal? ( net-libs/libmnl virtual/libelf )
 	iptables? ( >=net-firewall/iptables-1.4.20:= )
 	berkdb? ( sys-libs/db:= )
 	atm? ( net-dialup/linux-atm )
-	selinux? ( sys-libs/libselinux )"
+	selinux? ( sys-libs/libselinux )
+"
 # We require newer linux-headers for ipset support #549948 and some defines #553876
-DEPEND="${RDEPEND}
+DEPEND="
+	${RDEPEND}
 	app-arch/xz-utils
 	iptables? ( virtual/pkgconfig )
 	>=sys-devel/bison-2.4
 	sys-devel/flex
 	>=sys-kernel/linux-headers-3.16
-	elibc_glibc? ( >=sys-libs/glibc-2.7 )"
+	elibc_glibc? ( >=sys-libs/glibc-2.7 )
+"
 
 PATCHES=(
 	"${FILESDIR}"/${PN}-3.1.0-mtu.patch #291907
+	"${FILESDIR}"/${P}-fix-tc-actions.patch
+	"${FILESDIR}"/${P}-configure-nomagic.patch # bug 643722
 )
 
 src_prepare() {
 	if ! use ipv6 ; then
 		PATCHES+=(
-			"${FILESDIR}"/${PN}-4.2.0-no-ipv6.patch #326849
+			"${FILESDIR}"/${PN}-4.11.0-no-ipv6.patch #326849
 		)
 	fi
 
-	epatch "${PATCHES[@]}"
+	default
 
 	sed -i \
 		-e '/^CC :\?=/d' \
@@ -83,7 +89,12 @@ src_configure() {
 	${CC} ${CFLAGS} ${CPPFLAGS} ${LDFLAGS} test.c -lresolv >&/dev/null || sed -i '/^LDLIBS/s:-lresolv::' "${S}"/Makefile
 	popd >/dev/null
 
-	cat <<-EOF > Config
+	# run "configure" script first which will create "config.mk"...
+	econf
+
+	# ...now switch on/off requested features via USE flags
+	# this is only useful if the test did not set other things, per bug #643722
+	cat <<-EOF >> config.mk
 	TC_CONFIG_ATM := $(usex atm y n)
 	TC_CONFIG_XT  := $(usex iptables y n)
 	TC_CONFIG_NO_XT := $(usex iptables n y)
@@ -99,6 +110,10 @@ src_configure() {
 	EOF
 }
 
+src_compile() {
+	emake V=1
+}
+
 src_install() {
 	if use minimal ; then
 		into /
@@ -109,18 +124,16 @@ src_install() {
 
 	emake \
 		DESTDIR="${D}" \
-		LIBDIR="${EPREFIX}"/$(get_libdir) \
-		SBINDIR="${EPREFIX}"/sbin \
-		CONFDIR="${EPREFIX}"/etc/iproute2 \
-		DOCDIR="${EPREFIX}"/usr/share/doc/${PF} \
-		MANDIR="${EPREFIX}"/usr/share/man \
-		ARPDDIR="${EPREFIX}"/var/lib/arpd \
+		LIBDIR="${EPREFIX%/}"/$(get_libdir) \
+		SBINDIR="${EPREFIX%/}"/sbin \
+		CONFDIR="${EPREFIX%/}"/etc/iproute2 \
+		DOCDIR="${EPREFIX%/}"/usr/share/doc/${PF} \
+		MANDIR="${EPREFIX%/}"/usr/share/man \
+		ARPDDIR="${EPREFIX%/}"/var/lib/arpd \
 		install
 
-	rm "${ED}"/usr/share/doc/${PF}/*.{sgml,tex} || die #455988
-
 	dodir /bin
-	mv "${ED}"/{s,}bin/ip || die #330115
+	mv "${ED%/}"/{s,}bin/ip || die #330115
 
 	dolib.a lib/libnetlink.a
 	insinto /usr/include
@@ -128,12 +141,12 @@ src_install() {
 	# This local header pulls in a lot of linux headers it
 	# doesn't directly need.  Delete this header that requires
 	# linux-headers-3.8 until that goes stable.  #467716
-	sed -i '/linux\/netconf.h/d' "${ED}"/usr/include/libnetlink.h || die
+	sed -i '/linux\/netconf.h/d' "${ED%/}"/usr/include/libnetlink.h || die
 
 	if use berkdb ; then
 		dodir /var/lib/arpd
 		# bug 47482, arpd doesn't need to be in /sbin
 		dodir /usr/bin
-		mv "${ED}"/sbin/arpd "${ED}"/usr/bin/ || die
+		mv "${ED%/}"/sbin/arpd "${ED%/}"/usr/bin/ || die
 	fi
 }

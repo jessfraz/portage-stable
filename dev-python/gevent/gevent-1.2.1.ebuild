@@ -4,7 +4,7 @@
 EAPI=6
 
 # http://www.gevent.org/whatsnew_1_1.html#broader-platform-support
-PYTHON_COMPAT=( python2_7 python3_{4,5} pypy )
+PYTHON_COMPAT=( python2_7 python3_{4,5,6} pypy )
 PYTHON_REQ_USE="ssl(+),threads(+)"
 
 inherit distutils-r1 flag-o-matic
@@ -18,7 +18,7 @@ SRC_URI="mirror://pypi/${PN:0:1}/${PN}/${MY_P}.tar.gz"
 
 LICENSE="MIT"
 SLOT="0"
-KEYWORDS="~amd64 ~arm ~arm64 ~mips ~ppc ~ppc64 ~x86 ~amd64-linux ~x86-linux"
+KEYWORDS="amd64 ~arm ~arm64 ~mips ~ppc ~ppc64 x86 ~amd64-linux ~x86-linux"
 IUSE="doc examples"
 
 RDEPEND="
@@ -53,15 +53,15 @@ python_compile_all() {
 }
 
 python_test() {
-	cd greentest || die
+	cd src/greentest || die
 
 	GEVENT_RESOLVER=thread \
-		"${PYTHON}" testrunner.py --config ../known_failures.py || die
+		"${PYTHON}" testrunner.py --config known_failures.py || die
 	GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 \
-		"${PYTHON}" testrunner.py --config ../known_failures.py \
+		"${PYTHON}" testrunner.py --config known_failures.py \
 		--ignore tests_that_dont_use_resolver.txt || die
 	GEVENT_FILE=thread \
-		"${PYTHON}" testrunner.py --config ../known_failures.py $(grep -l subprocess test_*.py) || die
+		"${PYTHON}" testrunner.py --config known_failures.py $(grep -l subprocess test_*.py) || die
 }
 
 python_install_all() {

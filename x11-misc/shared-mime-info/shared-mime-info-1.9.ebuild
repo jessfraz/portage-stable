@@ -1,17 +1,16 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
-inherit eutils fdo-mime
+EAPI=6
+inherit xdg-utils
 
 DESCRIPTION="The Shared MIME-info Database specification"
-HOMEPAGE="http://freedesktop.org/wiki/Software/shared-mime-info"
-SRC_URI="http://people.freedesktop.org/~hadess/${P}.tar.xz"
+HOMEPAGE="https://freedesktop.org/wiki/Software/shared-mime-info"
+SRC_URI="https://people.freedesktop.org/~hadess/${P}.tar.xz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~ppc-aix ~amd64-fbsd ~x86-fbsd ~x64-freebsd ~x86-freebsd ~x86-interix ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+KEYWORDS="~alpha amd64 ~arm ~arm64 hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh ~sparc ~x86 ~ppc-aix ~x64-cygwin ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
 IUSE="test"
 
 RDEPEND=">=dev-libs/glib-2
@@ -22,14 +21,6 @@ DEPEND="${RDEPEND}
 	virtual/pkgconfig"
 
 DOCS=( ChangeLog HACKING NEWS README )
-
-src_prepare() {
-	# Useful patches from usptream git, will be in next release
-	epatch "${FILESDIR}"/${P}-iso-1.patch
-	epatch "${FILESDIR}"/${P}-iso-2.patch
-
-	epatch_user
-}
 
 src_configure() {
 	export ac_cv_func_fdatasync=no #487504
@@ -51,12 +42,12 @@ src_install() {
 
 	# in prefix, install an env.d entry such that prefix patch is used/added
 	if use prefix; then
-		echo "XDG_DATA_DIRS=\"${EPREFIX}/usr/share\"" > "${T}"/50mimeinfo
+		echo "XDG_DATA_DIRS=\"${EPREFIX}/usr/share\"" > "${T}"/50mimeinfo || die
 		doenvd "${T}"/50mimeinfo
 	fi
 }
 
 pkg_postinst() {
 	use prefix && export XDG_DATA_DIRS="${EPREFIX}"/usr/share
-	fdo-mime_mime_database_update
+	xdg_mimeinfo_database_update
 }

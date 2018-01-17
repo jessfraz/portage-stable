@@ -1,6 +1,10 @@
 # Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
+# Thomas Deutschmann <whissi@gentoo.org> (26 Oct 2017)
+# libressl: dev-libs/libressl is a base package on FreeBSD
+net-misc/wget libressl
+
 # Thomas Deutschmann <whissi@gentoo.org> (20 Jan 2017)
 # libressl: dev-libs/libressl is a base package on FreeBSD
 net-libs/libvncserver libressl
@@ -27,9 +31,6 @@ sys-apps/openrc pam
 # Jim Ramsay <lack@gentoo.org> (7 Sep 2007)
 # app-admin/gkrellm may pull in hddtemp, which is not yet available here
 app-admin/gkrellm hddtemp
-
-# Somehow, check's tests are broken..
-dev-util/checkstyle test
 
 # PDA masked until we can do some testing on it
 mail-client/claws-mail pda
@@ -73,11 +74,6 @@ gnome-base/nautilus tracker
 # ads require krb5, which is maksed on FreeBSD
 # cluster require ctdb, which doesn't support FreeBSD
 net-fs/samba ads cluster
-
-# Naohiro Aota <naota@gentoo.org> (08 Nov 2011)
-# capi require Linux features
-# hardened require prelink which depends on glibc
-app-emulation/wine capi
 
 # Naohiro Aota <naota@gentoo.org> (24 Nov 2011)
 # Masked because kerberos is masked

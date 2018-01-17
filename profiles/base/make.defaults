@@ -13,11 +13,11 @@ USE_EXPAND_VALUES_USERLAND="BSD GNU"
 
 # Env vars to expand into USE vars.  Modifying this requires prior
 # discussion on gentoo-dev@lists.gentoo.org.
-USE_EXPAND="ABI_MIPS ABI_PPC ABI_S390 ABI_X86 ALSA_CARDS APACHE2_MODULES APACHE2_MPMS CALLIGRA_FEATURES CALLIGRA_EXPERIMENTAL_FEATURES CAMERAS COLLECTD_PLUGINS CPU_FLAGS_ARM CPU_FLAGS_X86 CROSSCOMPILE_OPTS CURL_SSL ELIBC ENLIGHTENMENT_MODULES FFTOOLS GPSD_PROTOCOLS GRUB_PLATFORMS INPUT_DEVICES KERNEL L10N LCD_DEVICES LIBREOFFICE_EXTENSIONS LINGUAS LIRC_DEVICES LLVM_TARGETS MONKEYD_PLUGINS NETBEANS_MODULES NGINX_MODULES_HTTP NGINX_MODULES_MAIL NGINX_MODULES_STREAM OFED_DRIVERS OFFICE_IMPLEMENTATION OPENMPI_FABRICS OPENMPI_OFED_FEATURES OPENMPI_RM PHP_TARGETS POSTGRES_TARGETS PYTHON_SINGLE_TARGET PYTHON_TARGETS QEMU_SOFTMMU_TARGETS QEMU_USER_TARGETS ROS_MESSAGES RUBY_TARGETS SANE_BACKENDS USERLAND UWSGI_PLUGINS VIDEO_CARDS VOICEMAIL_STORAGE XFCE_PLUGINS XTABLES_ADDONS"
+USE_EXPAND="ABI_MIPS ABI_PPC ABI_S390 ABI_X86 ALSA_CARDS APACHE2_MODULES APACHE2_MPMS CALLIGRA_FEATURES CALLIGRA_EXPERIMENTAL_FEATURES CAMERAS COLLECTD_PLUGINS CPU_FLAGS_ARM CPU_FLAGS_X86 CURL_SSL ELIBC ENLIGHTENMENT_MODULES FFTOOLS GPSD_PROTOCOLS GRUB_PLATFORMS INPUT_DEVICES KERNEL L10N LCD_DEVICES LIBREOFFICE_EXTENSIONS LIRC_DEVICES LLVM_TARGETS MONKEYD_PLUGINS NETBEANS_MODULES NGINX_MODULES_HTTP NGINX_MODULES_MAIL NGINX_MODULES_STREAM OFED_DRIVERS OFFICE_IMPLEMENTATION OPENMPI_FABRICS OPENMPI_OFED_FEATURES OPENMPI_RM PHP_TARGETS POSTGRES_TARGETS PYTHON_SINGLE_TARGET PYTHON_TARGETS QEMU_SOFTMMU_TARGETS QEMU_USER_TARGETS ROS_MESSAGES RUBY_TARGETS SANE_BACKENDS USERLAND UWSGI_PLUGINS VIDEO_CARDS VOICEMAIL_STORAGE XFCE_PLUGINS XTABLES_ADDONS"
 
 # USE_EXPAND variables whose contents are not shown in package manager
 # output. Changes need discussion on gentoo-dev.
-USE_EXPAND_HIDDEN="USERLAND KERNEL ELIBC CROSSCOMPILE_OPTS ABI_MIPS ABI_PPC ABI_S390 ABI_X86 CPU_FLAGS_ARM CPU_FLAGS_X86"
+USE_EXPAND_HIDDEN="USERLAND KERNEL ELIBC ABI_MIPS ABI_PPC ABI_S390 ABI_X86 CPU_FLAGS_ARM CPU_FLAGS_X86"
 
 CONFIG_PROTECT="/etc"
 CONFIG_PROTECT_MASK="/etc/env.d /etc/gconf"
@@ -49,10 +49,6 @@ LIBREOFFICE_EXTENSIONS="presenter-console presenter-minimizer"
 # By default build all koffice / calligra features.
 CALLIGRA_FEATURES="kexi words flow plan sheets stage tables krita karbon braindump author"
 
-# Ole Markus With <olemarkus@gentoo.org> (09 Oct 2010)
-# Default PHP targets (should always be latest stable version)
-PHP_TARGETS="php5-6"
-
 # Andreas K. Huettel <dilfridge@gentoo.org> (28 Sep 2010)
 # Small default list of enabled plugins for collectd
 COLLECTD_PLUGINS="df interface irq load memory rrdtool swap syslog"
@@ -74,16 +70,6 @@ XTABLES_ADDONS="quota2 psd pknock lscan length2 ipv4options ipset ipp2p iface ge
 # Robert Buchholz <rbu@gentoo.org> (17 Jan 2006)
 # Some common lcd devices
 LCD_DEVICES="bayrad cfontz cfontz633 glk hd44780 lb216 lcdm001 mtxorb ncurses text"
-
-# 2006/10/17 - Daniel Drake <dsd@gentoo.org>
-# cracklib is becoming optional in shadow (and removed from system) as of
-# today. However, cracklib is very standard across the Linux world so we
-# enable it by default.
-#
-# Diego Pettenò <flameeyes@gentoo.org> (14 Jul 2007)
-# Moved to base/ profile from default-linux/ so that it also applies to
-# embedded and hardened profiles.
-USE="cracklib"
 
 # Miroslav Šulc <fordfrog@gentoo.org> (19 Nov 2008)
 # Netbeans modules/clusters
@@ -117,12 +103,13 @@ PYTHONDONTWRITEBYTECODE="1"
 # Add default USE value for bootstrap and rename it from STAGE1_USE to BOOTSTRAP_USE
 # Add in expanded PYTHON_TARGETS or stage1 builds break because of USE="-* ${BOOTSTRAP_USE}"
 # This MUST be kept in sync with the PYTHON_TARGETS below
-BOOTSTRAP_USE="cxx unicode internal-glib python_targets_python3_4 python_targets_python2_7"
+BOOTSTRAP_USE="cxx unicode internal-glib python_targets_python3_5 python_targets_python2_7"
 
 # Mike Gilbert <floppym@gentoo.org> (15 May 2012)
 # Default target(s) for python-r1.eclass
-PYTHON_TARGETS="python2_7 python3_4"
-PYTHON_SINGLE_TARGET="python3_4"
+# Updated to python3_5 on 28 Nov 2017
+PYTHON_TARGETS="python2_7 python3_5"
+PYTHON_SINGLE_TARGET="python3_5"
 
 # Michał Górny <mgorny@gentoo.org> (10 Aug 2013)
 # Moved from portage's make.globals.
@@ -145,3 +132,18 @@ TWISTED_DISABLE_WRITING_OF_PLUGIN_CACHE="1"
 # Aaron W. Swenson <titanofold@gentoo.org> (9 Jul 2017)
 # Default target(s) for postgres{,-multi}.eclass
 POSTGRES_TARGETS="postgres9_5"
+
+# Michael Orlitzky <mjo@gentoo.org> (17 Nov 2017)
+#
+# Default PHP targets, used only for extensions at the moment.
+#
+# The value of this variable should be chosen to be "least annoying by
+# default." For example, some packages support only php-5.x and some
+# only php-7.x. By having both "php5-6" and php7-0" in PHP_TARGETS, we
+# ensure that users who don't care one way or the other don't have to
+# mess with this variable in order to install those packages.
+#
+# Moreover, it should only contain targets that have a stable version
+# of PHP, to avoid pulling in an unstable PHP on stable systems.
+#
+PHP_TARGETS="php5-6 php7-0"

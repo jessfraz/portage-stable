@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 # Keep them sorted
@@ -135,6 +135,7 @@ handbook - Enable handbooks generation for packages by KDE
 hardened - Activate default security enhancements for toolchain (gcc, glibc, binutils)
 hddtemp - Enable monitoring of hdd temperature (app-admin/hddtemp)
 hdf5 - Add support for the Hierarchical Data Format v5
+headers-only - Install only C headers instead of whole package. Mainly used by sys-devel/crossdev for toolchain bootstrap.
 hscolour - Include coloured haskell sources to generated documentation (dev-haskell/hscolour)
 ibm - Add support for IBM ppc64 specific systems
 iconv - Enable support for the iconv character set conversion library
@@ -165,7 +166,6 @@ jpeg - Add JPEG image support
 jpeg2k - Support for JPEG 2000, a wavelet-based image compression format
 kde - Add support for KDE (K Desktop Environment)
 kerberos - Add kerberos support
-kontact - Enable support for the KDE personal information manager (kde-apps/kdepim*)
 ladspa - Enable the ability to support ladspa plugins
 lame - Prefer using LAME libraries for MP3 encoding support
 lapack - Add support for the virtual/lapack numerical library

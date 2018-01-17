@@ -1,11 +1,10 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
+EAPI=6
 
 PYTHON_COMPAT=( python2_7 )
-inherit autotools eutils flag-o-matic multilib-minimal python-any-r1 versionator
+inherit autotools flag-o-matic multilib-minimal python-any-r1 versionator
 
 MY_P="${P/mit-}"
 P_DIR=$(get_version_component_range 1-2)
@@ -15,8 +14,8 @@ SRC_URI="http://web.mit.edu/kerberos/dist/krb5/${P_DIR}/${MY_P}.tar.gz"
 
 LICENSE="openafs-krb5-a BSD MIT OPENLDAP BSD-2 HPND BSD-4 ISC RSA CC-BY-SA-3.0 || ( BSD-2 GPL-2+ )"
 SLOT="0"
-KEYWORDS="~alpha amd64 arm ~arm64 hppa ~ia64 ~mips ~ppc ppc64 ~s390 ~sh ~sparc ~x86"
-IUSE="doc +keyutils libressl openldap +pkinit selinux +threads test xinetd"
+KEYWORDS="alpha amd64 arm ~arm64 hppa ia64 ~mips ppc ppc64 ~s390 ~sh sparc x86"
+IUSE="doc +keyutils libressl nls openldap +pkinit selinux +threads test xinetd"
 
 CDEPEND="
 	!!app-crypt/heimdal
@@ -56,14 +55,20 @@ MULTILIB_CHOST_TOOLS=(
 )
 
 src_prepare() {
-	epatch "${FILESDIR}/${PN}-1.12_warn_cflags.patch"
-	epatch "${FILESDIR}/${PN}-config_LDFLAGS.patch"
+	eapply "${FILESDIR}/${PN}-1.12_warn_cflags.patch"
+	eapply -p2 "${FILESDIR}/${PN}-config_LDFLAGS.patch"
+	eapply -p0 "${FILESDIR}/${PN}-1.14.2-redeclared-ttyname.patch"
+	eapply "${FILESDIR}/${PN}-1.14.4-disable-nls.patch"
 
+	# Make sure we always use the system copies.
+	rm -rf util/{et,ss,verto}
+	sed -i 's:^[[:space:]]*util/verto$::' configure.in || die
+
+	eapply_user
 	eautoreconf
 }
 
 src_configure() {
-	append-cppflags "-I${EPREFIX}/usr/include/et"
 	# QA
 	append-flags -fno-strict-aliasing
 	append-flags -fno-strict-overflow
@@ -78,6 +83,7 @@ multilib_src_configure() {
 	econf \
 		$(use_with openldap ldap) \
 		"$(multilib_native_use_with test tcl "${EPREFIX}/usr")" \
+		$(use_enable nls) \
 		$(use_enable pkinit) \
 		$(use_enable threads thread-support) \
 		--without-hesiod \
@@ -113,7 +119,7 @@ multilib_src_install_all() {
 	dodoc README
 
 	if use doc; then
-		dohtml -r doc/html/*
+		dodoc -r doc/html
 		docinto pdf
 		dodoc doc/pdf/*.pdf
 	fi
@@ -138,14 +144,5 @@ multilib_src_install_all() {
 	if use xinetd ; then
 		insinto /etc/xinetd.d
 		newins "${FILESDIR}/kpropd.xinetd" kpropd
-	fi
-}
-
-pkg_preinst() {
-	if has_version "<${CATEGORY}/${PN}-1.8.0" ; then
-		elog "MIT split the Kerberos applications from the base Kerberos"
-		elog "distribution.  Kerberized versions of telnet, rlogin, rsh, rcp,"
-		elog "ftp clients and telnet, ftp deamons now live in"
-		elog "\"app-crypt/mit-krb5-appl\" package."
 	fi
 }

@@ -1,9 +1,9 @@
 # Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=6
 
-inherit flag-o-matic multilib toolchain-funcs
+inherit flag-o-matic toolchain-funcs
 
 DESCRIPTION="Library for build EFI Applications"
 HOMEPAGE="http://gnu-efi.sourceforge.net/"
@@ -18,8 +18,8 @@ LICENSE="GPL-2+ BSD BSD-2"
 SLOT="0"
 # IA64 build is broken in setjmp code:
 # https://sourceforge.net/p/gnu-efi/bugs/9/
-KEYWORDS="-* amd64 ~arm ~arm64 -ia64 x86"
-IUSE="abi_x86_32 abi_x86_64"
+KEYWORDS="-* ~amd64 ~arm ~arm64 -ia64 ~x86"
+IUSE="abi_x86_32 abi_x86_64 -custom-cflags"
 
 DEPEND="sys-apps/pciutils"
 RDEPEND=""
@@ -28,6 +28,11 @@ RDEPEND=""
 # so doing these QA checks on them doesn't make sense.
 QA_EXECSTACK="usr/*/lib*efi.a:* usr/*/crt*.o"
 RESTRICT="strip"
+
+src_prepare() {
+	sed -i -e "s/-Werror//" Make.defaults || die
+	default
+}
 
 efimake() {
 	local arch=
@@ -56,8 +61,15 @@ efimake() {
 src_compile() {
 	tc-export BUILD_CC AR AS CC LD
 
-	# https://bugs.gentoo.org/607992
-	filter-mfpmath sse
+	if use custom-cflags; then
+		# https://bugs.gentoo.org/607992
+		filter-mfpmath sse
+
+		# https://bugs.gentoo.org/619628
+		append-flags $(test-flags-CC -mno-avx)
+	else
+		unset CFLAGS CPPFLAGS LDFLAGS
+	fi
 
 	if [[ ${CHOST} == x86_64* ]]; then
 		use abi_x86_32 && CHOST=i686 ABI=x86 efimake
@@ -74,5 +86,5 @@ src_install() {
 	else
 		efimake INSTALLROOT="${D}" install
 	fi
-	dodoc README* ChangeLog
+	einstalldocs
 }

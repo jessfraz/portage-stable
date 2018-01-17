@@ -1,6 +1,5 @@
 # Copyright 1999-2014 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI="4"
 
@@ -36,7 +35,7 @@ src_prepare() {
 # slot the info pages.  do this w/out munging the source so we don't have
 # to depend on texinfo to regen things.  #464146 (among others)
 slot_info_pages() {
-	pushd "${D}"/usr/share/info >/dev/null
+	pushd "${ED}"/usr/share/info >/dev/null
 	rm -f dir
 
 	# Rewrite all the references to other pages.
@@ -65,7 +64,7 @@ slot_info_pages() {
 src_install() {
 	default
 	slot_info_pages
-	rm -f "${D}"/usr/bin/{aclocal,automake}
+	rm -f "${ED}"/usr/bin/{aclocal,automake}
 
 	# remove all config.guess and config.sub files replacing them
 	# w/a symlink to a specific gnuconfig version

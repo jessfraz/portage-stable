@@ -1,11 +1,9 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
-AUTOTOOLS_AUTORECONF=1
+EAPI=6
 
-inherit autotools-multilib
+inherit autotools ltprune multilib-minimal
 
 DESCRIPTION="General purpose crypto library based on the code used in GnuPG"
 HOMEPAGE="http://www.gnupg.org/"
@@ -13,7 +11,7 @@ SRC_URI="mirror://gnupg/${PN}/${P}.tar.bz2"
 
 LICENSE="LGPL-2.1 MIT"
 SLOT="11/11" # subslot = soname major version
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~ppc-aix ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~x64-freebsd ~x86-freebsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~ppc-aix ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
 IUSE=""
 
 RDEPEND=">=dev-libs/libgpg-error-1.12[${MULTILIB_USEDEP}]
@@ -24,15 +22,18 @@ RDEPEND=">=dev-libs/libgpg-error-1.12[${MULTILIB_USEDEP}]
 	)"
 DEPEND="${RDEPEND}"
 
-DOCS=( AUTHORS ChangeLog NEWS README THANKS TODO )
-
 PATCHES=(
 	"${FILESDIR}"/${PN}-1.5.0-uscore.patch
 	"${FILESDIR}"/${PN}-multilib-syspath.patch
 	"${FILESDIR}"/${PN}-1.5.4-clang-arm.patch
 )
 
-src_configure() {
+src_prepare() {
+	default
+	eautoreconf
+}
+
+multilib_src_configure() {
 	local myeconfargs=(
 		--disable-padlock-support # bug 201917
 		--disable-dependency-tracking
@@ -48,11 +49,16 @@ src_configure() {
 		$([[ ${CHOST} == *86*-darwin* ]] && echo "--disable-asm")
 		$([[ ${CHOST} == sparcv9-*-solaris* ]] && echo "--disable-asm")
 	)
-	autotools-multilib_src_configure
+	ECONF_SOURCE="${S}" econf "${myeconfargs[@]}"
 }
 
-src_install() {
-	autotools-multilib_src_install
+multilib_src_install() {
+	emake DESTDIR="${D}" install
 
 	rm -r "${ED%/}"/usr/{bin,include,lib*/*.so,share} || die
+}
+
+multilib_src_install_all() {
+	default
+	prune_libtool_files
 }

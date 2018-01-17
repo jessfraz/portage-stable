@@ -1,14 +1,13 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/dev-libs/libaio/libaio-0.3.110.ebuild,v 1.9 2015/05/01 19:01:01 jer Exp $
 
 EAPI=5
 
 inherit eutils multilib-minimal toolchain-funcs flag-o-matic
 
 DESCRIPTION="Asynchronous input/output library that uses the kernels native interface"
-HOMEPAGE="https://git.fedorahosted.org/cgit/libaio.git/  http://lse.sourceforge.net/io/aio.html"
-SRC_URI="https://fedorahosted.org/releases/${PN:0:1}/${PN:1:1}/${PN}/${P}.tar.gz"
+HOMEPAGE="http://lse.sourceforge.net/io/aio.html"
+SRC_URI="mirror://debian/pool/main/liba/${PN}/${PN}_${PV}.orig.tar.gz -> ${P}.tar.gz"
 
 LICENSE="LGPL-2"
 SLOT="0"
@@ -21,7 +20,8 @@ src_prepare() {
 		"${FILESDIR}"/${PN}-0.3.109-x32.patch \
 		"${FILESDIR}"/${PN}-0.3.109-testcase-8.patch \
 		"${FILESDIR}"/${PN}-0.3.110-cppflags.patch \
-		"${FILESDIR}"/${PN}-0.3.110-optional-werror.patch
+		"${FILESDIR}"/${PN}-0.3.110-optional-werror.patch \
+		"${FILESDIR}"/${PN}-0.3.110-link-stdlib.patch #558406
 
 	local sed_args=(
 		-e "/^prefix=/s:/usr:${EPREFIX}/usr:"

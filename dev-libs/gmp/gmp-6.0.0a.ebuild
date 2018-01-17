@@ -1,31 +1,27 @@
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/dev-libs/gmp/gmp-6.0.0a.ebuild,v 1.2 2014/05/08 20:01:45 vapier Exp $
 
 EAPI="4"
 
-inherit flag-o-matic eutils libtool toolchain-funcs multilib-minimal
+inherit eutils libtool toolchain-funcs multilib-minimal
 
 MY_PV=${PV/_p*}
 MY_P=${PN}-${MY_PV}
 PLEVEL=${PV/*p}
-DESCRIPTION="Library for arithmetic on arbitrary precision integers, rational numbers, and floating-point numbers"
+DESCRIPTION="Library for arbitrary-precision arithmetic on different type of numbers"
 HOMEPAGE="http://gmplib.org/"
 SRC_URI="mirror://gnu/${PN}/${MY_P}.tar.xz
 	ftp://ftp.gmplib.org/pub/${MY_P}/${MY_P}.tar.xz
 	doc? ( http://gmplib.org/${PN}-man-${MY_PV}.pdf )"
 
-LICENSE="LGPL-3"
+LICENSE="|| ( LGPL-3+ GPL-2+ )"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~sparc-fbsd ~x86-fbsd"
+KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~amd64-fbsd ~sparc-fbsd ~x86-fbsd"
 IUSE="doc cxx pgo static-libs"
 
 DEPEND="sys-devel/m4
 	app-arch/xz-utils"
-RDEPEND="abi_x86_32? (
-	!<=app-emulation/emul-linux-x86-baselibs-20131008-r1
-	!app-emulation/emul-linux-x86-baselibs[-abi_x86_32(-)]
-)"
+RDEPEND=""
 
 S=${WORKDIR}/${MY_P%a}
 
@@ -44,16 +40,17 @@ src_prepare() {
 	mv configure configure.wrapped || die
 	cat <<-\EOF > configure
 	#!/bin/sh
-	exec env ABI="$GMPABI" "$0.wrapped" "$@"
+	exec env ABI="${GMPABI}" "$0.wrapped" "$@"
 	EOF
-	chmod a+rx configure
+	# Patches to original configure might have lost the +x bit.
+	chmod a+rx configure{,.wrapped}
 }
 
 multilib_src_configure() {
 	# Because of our 32-bit userland, 1.0 is the only HPPA ABI that works
 	# http://gmplib.org/manual/ABI-and-ISA.html#ABI-and-ISA (bug #344613)
 	if [[ ${CHOST} == hppa2.0-* ]] ; then
-		export GMPABI="1.0"
+		GMPABI="1.0"
 	fi
 
 	# ABI mappings (needs all architectures supported)

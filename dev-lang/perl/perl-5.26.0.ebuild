@@ -6,7 +6,7 @@ EAPI=6
 inherit eutils alternatives flag-o-matic toolchain-funcs multilib multiprocessing
 
 PATCH_VER=1
-CROSS_VER=1.1.4
+CROSS_VER=1.1.5
 PATCH_BASE="perl-5.25.11-patches-${PATCH_VER}"
 
 DIST_AUTHOR=XSAWYERX
@@ -45,7 +45,7 @@ SRC_URI="
 	https://dev.gentoo.org/~kentnl/distfiles/${PATCH_BASE}.tar.xz
 	https://github.com/arsv/perl-cross/releases/download/${CROSS_VER}/perl-cross-${CROSS_VER}.tar.gz
 "
-HOMEPAGE="http://www.perl.org/"
+HOMEPAGE="https://www.perl.org/"
 
 LICENSE="|| ( Artistic GPL-1+ )"
 SLOT="0/${SUBSLOT}"
@@ -121,9 +121,9 @@ check_rebuild() {
 
 	# Reinstall w/ USE Change
 	elif (   use ithreads && ! has_version dev-lang/perl[ithreads] ) || \
-	     ( ! use ithreads &&   has_version dev-lang/perl[ithreads] ) || \
-	     (   use debug    && ! has_version dev-lang/perl[debug]    ) || \
-	     ( ! use debug    &&   has_version dev-lang/perl[debug]    ) ; then
+		 ( ! use ithreads &&   has_version dev-lang/perl[ithreads] ) || \
+		 (   use debug    && ! has_version dev-lang/perl[debug]    ) || \
+		 ( ! use debug    &&   has_version dev-lang/perl[debug]    ) ; then
 		echo ""
 		ewarn "TOGGLED USE-FLAGS WARNING:"
 		ewarn "You changed one of the use-flags ithreads or debug."
@@ -283,10 +283,6 @@ echo "${patchoutput}" >> "${S}/MANIFEST"
 
 src_prepare_perlcross() {
 	cp -a ../perl-cross-${CROSS_VER}/* . || die
-
-	sed -i \
-		-e 's/(15 + $CLEANUP)/(13 + $CLEANUP)/' \
-		cnf/diffs/perl5-${PV}/makemaker-test.patch || die
 
 	sed -i \
 		-e 's/MakeMaker\.pm .*/MakeMaker.pm bf9174c70a0e50ff2fee4552c7df89b37d292da1/' \

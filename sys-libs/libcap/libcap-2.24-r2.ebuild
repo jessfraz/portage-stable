@@ -1,6 +1,5 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI="4"
 
@@ -13,7 +12,7 @@ SRC_URI="mirror://kernel/linux/libs/security/linux-privs/libcap2/${P}.tar.xz"
 # it's available under either of the licenses
 LICENSE="|| ( GPL-2 BSD )"
 SLOT="0"
-KEYWORDS="~alpha amd64 arm arm64 hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh sparc x86 ~amd64-linux ~arm-linux ~ia64-linux ~x86-linux"
+KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~amd64-linux ~arm-linux ~x86-linux"
 IUSE="pam static-libs"
 
 RDEPEND=">=sys-apps/attr-2.4.47-r1[${MULTILIB_USEDEP}]
@@ -48,8 +47,9 @@ multilib_src_configure() {
 }
 
 multilib_src_compile() {
-	tc-export_build_env BUILD_CC
 	tc-export AR CC RANLIB
+	local BUILD_CC
+	tc-export_build_env BUILD_CC
 
 	default
 }
@@ -58,7 +58,7 @@ multilib_src_install() {
 	# no configure, needs explicit install line #444724#c3
 	emake install DESTDIR="${ED}"
 
-	multilib_is_native_abi && gen_usr_ldscript -a cap
+	gen_usr_ldscript -a cap
 	use static-libs || rm "${ED}"/usr/$(get_libdir)/libcap.a
 
 	rm -rf "${ED}"/usr/$(get_libdir)/security

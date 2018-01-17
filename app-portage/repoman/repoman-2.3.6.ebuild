@@ -8,13 +8,13 @@ PYTHON_REQ_USE='bzip2(+)'
 
 inherit distutils-r1
 
-if [[ ${PV} == 9999 ]]; then
+if [[ ${PV} == *9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://anongit.gentoo.org/git/proj/portage.git"
 	S="${WORKDIR}/${P}/repoman"
 else
-	SRC_URI="https://dev.gentoo.org/~dolsen/releases/${PN}/${P}.tar.bz2"
-	KEYWORDS="alpha amd64 arm ~arm64 hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh sparc x86 ~ppc-aix ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+	SRC_URI="https://dev.gentoo.org/~zmedico/portage/archives/${P}.tar.bz2"
+	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~sparc ~x86 ~ppc-aix ~x64-cygwin ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
 fi
 
 DESCRIPTION="Repoman is a Quality Assurance tool for Gentoo ebuilds"
@@ -25,28 +25,10 @@ SLOT="0"
 IUSE=""
 
 RDEPEND="
-	>=sys-apps/portage-2.3.0_rc[${PYTHON_USEDEP}]
+	>=sys-apps/portage-2.3.14[${PYTHON_USEDEP}]
 	>=dev-python/lxml-3.6.0[${PYTHON_USEDEP}]
 "
 DEPEND="${RDEPEND}"
-
-python_prepare_all() {
-	distutils-r1_python_prepare_all
-
-	if [[ -n "${EPREFIX}" ]] ; then
-		einfo "Prefixing shebangs ..."
-
-		local file
-		while read -r -d $'\0' file; do
-			local shebang=$(head -n1 "${file}")
-
-			if [[ ${shebang} == "#!"* && ! ${shebang} == "#!${EPREFIX}/"* ]] ; then
-				sed -i -e "1s:.*:#!${EPREFIX}${shebang:2}:" "${file}" || \
-					die "sed failed"
-			fi
-		done < <(find . -type f -print0)
-	fi
-}
 
 python_test() {
 	esetup.py test

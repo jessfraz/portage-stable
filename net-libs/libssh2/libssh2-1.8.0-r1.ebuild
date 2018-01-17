@@ -2,16 +2,15 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
-inherit autotools git-r3 multilib-minimal
+inherit ltprune multilib-minimal
 
-EGIT_REPO_URI="https://github.com/libssh2/libssh2"
 DESCRIPTION="Library implementing the SSH2 protocol"
 HOMEPAGE="http://www.libssh2.org/"
-SRC_URI=""
+SRC_URI="http://www.${PN}.org/download/${P}.tar.gz"
 
 LICENSE="BSD"
 SLOT="0"
-KEYWORDS=""
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-solaris"
 IUSE="gcrypt libressl static-libs test zlib"
 
 DEPEND="
@@ -22,29 +21,30 @@ DEPEND="
 	gcrypt? ( >=dev-libs/libgcrypt-1.5.3:0[${MULTILIB_USEDEP}] )
 	zlib? ( >=sys-libs/zlib-1.2.8-r1[${MULTILIB_USEDEP}] )
 "
-RDEPEND="${DEPEND}"
+RDEPEND="
+	${DEPEND}
+"
 
-DOCS=( NEWS README )
-
-src_prepare() {
-	default
-
-	sed -i -e 's|mansyntax.sh||g' tests/Makefile.am || die
-	ln -s ../src/libssh2_config.h.in example/libssh2_config.h.in || die
-
-	eautoreconf
-}
+DOCS=(
+	NEWS README
+)
+PATCHES=(
+	"${FILESDIR}"/${PN}-1.8.0-libgcrypt-prefix.patch
+	"${FILESDIR}"/${PN}-1.8.0-mansyntax_sh.patch
+)
 
 multilib_src_configure() {
 	# Disable tests that require extra permissions (bug #333319)
 	use test && local -x ac_cv_path_SSHD=
 
-	local crypto
-	if use gcrypt; then
-		crypto=libgcrypt
-	else
-		crypto=openssl
-	fi
+	ECONF_SOURCE=${S} econf \
+		$(use_with zlib libz) \
+		$(usex gcrypt --with-libgcrypt --with-openssl) \
+		$(use_enable static-libs static)
+}
 
-	ECONF_SOURCE="${S}" econf --with-crypto=${crypto}
+multilib_src_install_all() {
+	einstalldocs
+
+	prune_libtool_files
 }

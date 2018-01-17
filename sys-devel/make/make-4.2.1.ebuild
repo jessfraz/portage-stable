@@ -1,7 +1,7 @@
 # Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=4
+EAPI=5
 
 inherit flag-o-matic eutils
 
@@ -11,19 +11,21 @@ SRC_URI="mirror://gnu//make/${P}.tar.bz2"
 
 LICENSE="GPL-3+"
 SLOT="0"
-KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~ppc-aix ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+KEYWORDS="alpha amd64 arm ~arm64 hppa ia64 ~m68k ~mips ppc ppc64 ~s390 ~sh sparc x86 ~ppc-aix ~x64-cygwin ~amd64-fbsd ~sparc-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~m68k-mint ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
 IUSE="guile nls static"
 
-CDEPEND="guile? ( >=dev-scheme/guile-1.8 )"
+CDEPEND="guile? ( >=dev-scheme/guile-1.8:= )"
 DEPEND="${CDEPEND}
 	nls? ( sys-devel/gettext )"
 RDEPEND="${CDEPEND}
 	nls? ( virtual/libintl )"
 
+PATCHES=(
+	"${FILESDIR}"/${PN}-3.82-darwin-library_search-dylib.patch
+)
+
 src_prepare() {
-	epatch \
-		"${FILESDIR}"/${PN}-3.82-darwin-library_search-dylib.patch \
-		"${FILESDIR}"/${P}-char-cast.patch
+	epatch "${PATCHES[@]}"
 }
 
 src_configure() {
@@ -36,7 +38,7 @@ src_configure() {
 
 src_install() {
 	emake DESTDIR="${D}" install
-	dodoc AUTHORS ChangeLog NEWS README*
+	dodoc AUTHORS NEWS README*
 	if [[ ${USERLAND} == "GNU" ]] ; then
 		# we install everywhere as 'gmake' but on GNU systems,
 		# symlink 'make' to 'gmake'

@@ -1,12 +1,12 @@
 # Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI="4"
+EAPI="5"
 
-inherit flag-o-matic
+inherit flag-o-matic eutils
 
 DESCRIPTION="utilities to access MS-DOS disks from Unix without mounting them"
-HOMEPAGE="http://mtools.linux.lu/"
+HOMEPAGE="https://www.gnu.org/software/mtools/ https://savannah.gnu.org/projects/mtools"
 SRC_URI="mirror://gnu/${PN}/${P}.tar.bz2"
 
 LICENSE="GPL-3"
@@ -28,6 +28,10 @@ RDEPEND="${DEPEND}"
 src_prepare() {
 	# Don't throw errors on existing directories
 	sed -i -e "s:mkdir:mkdir -p:" mkinstalldirs || die
+
+	epatch "${FILESDIR}"/${P}-locking.patch # https://crbug.com/508713
+	epatch "${FILESDIR}"/${P}-attr.patch # https://crbug.com/644387
+	epatch "${FILESDIR}"/${P}-memset.patch
 }
 
 src_configure() {

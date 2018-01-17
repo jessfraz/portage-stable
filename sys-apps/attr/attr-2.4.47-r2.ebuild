@@ -1,13 +1,12 @@
 # Copyright 1999-2015 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI="4"
 
-inherit eutils toolchain-funcs multilib-minimal
+inherit eutils libtool toolchain-funcs multilib-minimal
 
 DESCRIPTION="Extended attributes tools"
-HOMEPAGE="http://savannah.nongnu.org/projects/attr"
+HOMEPAGE="https://savannah.nongnu.org/projects/attr"
 SRC_URI="mirror://nongnu/${PN}/${P}.src.tar.gz"
 
 LICENSE="LGPL-2.1"
@@ -29,6 +28,8 @@ src_prepare() {
 		include/builddefs.in \
 		|| die
 	strip-linguas -u po
+	elibtoolize #580792
+
 	multilib_copy_sources # https://savannah.nongnu.org/bugs/index.php?39736
 }
 

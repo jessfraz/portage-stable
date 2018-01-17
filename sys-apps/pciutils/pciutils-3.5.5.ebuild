@@ -1,10 +1,9 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI="5"
+EAPI=5
 
-inherit eutils multilib toolchain-funcs multilib-minimal
+inherit eutils multilib toolchain-funcs multilib-minimal flag-o-matic
 
 DESCRIPTION="Various utilities dealing with the PCI bus"
 HOMEPAGE="http://mj.ucw.cz/sw/pciutils/ https://git.kernel.org/?p=utils/pciutils/pciutils.git"
@@ -12,24 +11,32 @@ SRC_URI="ftp://atrey.karlin.mff.cuni.cz/pub/linux/pci/${P}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="alpha amd64 arm ~arm64 hppa ia64 ~m68k ~mips ppc ppc64 s390 ~sh sparc x86 ~amd64-fbsd ~x86-fbsd ~x64-freebsd ~amd64-linux ~arm-linux ~x86-linux"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux"
 IUSE="dns +kmod static-libs +udev zlib"
 
 # Have the sub-libs in RDEPEND with [static-libs] since, logically,
-# our libssl.a depends on libz.a/etc... at runtime.
-LIB_DEPEND="zlib? ( >=sys-libs/zlib-1.2.8-r1[static-libs(+),${MULTILIB_USEDEP}] )"
-DEPEND="kmod? ( sys-apps/kmod )
+# our libpci.a depends on libz.a/etc... at runtime.
+LIB_DEPEND="
+	zlib? ( >=sys-libs/zlib-1.2.8-r1[static-libs(+),${MULTILIB_USEDEP}] )
+	udev? ( >=virtual/libudev-208[static-libs(+),${MULTILIB_USEDEP}] )
+"
+DEPEND="
+	kmod? ( sys-apps/kmod )
 	static-libs? ( ${LIB_DEPEND} )
 	!static-libs? ( ${LIB_DEPEND//static-libs(+),} )
-	udev? ( >=virtual/libudev-208[${MULTILIB_USEDEP}] )"
-RDEPEND="${DEPEND}
+"
+RDEPEND="
+	${DEPEND}
 	sys-apps/hwids
-	abi_x86_32? (
-		!<=app-emulation/emul-linux-x86-baselibs-20140508-r14
-		!app-emulation/emul-linux-x86-baselibs[-abi_x86_32(-)]
-	)"
-DEPEND="${DEPEND}
-	kmod? ( virtual/pkgconfig )"
+"
+DEPEND="
+	${DEPEND}
+	kmod? ( virtual/pkgconfig )
+"
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-3.1.9-static-pc.patch
+)
 
 MULTILIB_WRAPPED_HEADERS=( /usr/include/pci/config.h )
 
@@ -42,7 +49,7 @@ switch_config() {
 }
 
 src_prepare() {
-	epatch "${FILESDIR}"/${PN}-3.1.9-static-pc.patch
+	epatch "${PATCHES[@]}"
 
 	if use static-libs ; then
 		cp -pPR "${S}" "${S}.static" || die
@@ -52,12 +59,17 @@ src_prepare() {
 	multilib_copy_sources
 }
 
+multilib_src_configure() {
+	append-lfs-flags #471102
+}
+
 pemake() {
 	emake \
 		HOST="${CHOST}" \
 		CROSS_COMPILE="${CHOST}-" \
 		CC="$(tc-getCC)" \
 		AR="$(tc-getAR)" \
+		PKG_CONFIG="$(tc-getPKG_CONFIG)" \
 		RANLIB="$(tc-getRANLIB)" \
 		DNS=$(usex dns) \
 		IDSDIR='$(SHAREDIR)/misc' \

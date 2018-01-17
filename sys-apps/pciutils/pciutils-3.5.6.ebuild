@@ -1,10 +1,9 @@
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI="5"
+EAPI=6
 
-inherit eutils multilib toolchain-funcs
+inherit multilib toolchain-funcs multilib-minimal flag-o-matic
 
 DESCRIPTION="Various utilities dealing with the PCI bus"
 HOMEPAGE="http://mj.ucw.cz/sw/pciutils/ https://git.kernel.org/?p=utils/pciutils/pciutils.git"
@@ -12,26 +11,56 @@ SRC_URI="ftp://atrey.karlin.mff.cuni.cz/pub/linux/pci/${P}.tar.gz"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="alpha amd64 arm arm64 hppa ia64 m68k ~mips ppc ppc64 s390 sh sparc x86 ~amd64-fbsd ~x86-fbsd ~x64-freebsd ~amd64-linux ~arm-linux ~x86-linux"
-IUSE="+kmod static-libs zlib"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~m68k ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux"
+IUSE="dns +kmod static-libs +udev zlib"
 
 # Have the sub-libs in RDEPEND with [static-libs] since, logically,
-# our libssl.a depends on libz.a/etc... at runtime.
-LIB_DEPEND="zlib? ( sys-libs/zlib[static-libs(+)] )"
-DEPEND="kmod? ( sys-apps/kmod )
+# our libpci.a depends on libz.a/etc... at runtime.
+LIB_DEPEND="
+	zlib? ( >=sys-libs/zlib-1.2.8-r1[static-libs(+),${MULTILIB_USEDEP}] )
+	udev? ( >=virtual/libudev-208[static-libs(+),${MULTILIB_USEDEP}] )
+"
+DEPEND="
+	kmod? ( sys-apps/kmod )
 	static-libs? ( ${LIB_DEPEND} )
-	!static-libs? ( ${LIB_DEPEND//\[static-libs(+)]} )"
-RDEPEND="${DEPEND}
-	sys-apps/hwids"
-DEPEND="${DEPEND}
-	kmod? ( virtual/pkgconfig )"
+	!static-libs? ( ${LIB_DEPEND//static-libs(+),} )
+"
+RDEPEND="
+	${DEPEND}
+	sys-apps/hwids
+"
+DEPEND="
+	${DEPEND}
+	kmod? ( virtual/pkgconfig )
+"
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-3.1.9-static-pc.patch
+)
+
+MULTILIB_WRAPPED_HEADERS=( /usr/include/pci/config.h )
+
+switch_config() {
+	[[ $# -ne 2 ]] && return 1
+	local opt=$1 val=$2
+
+	sed "s@^\(${opt}=\).*\$@\1${val}@" -i Makefile || die
+	return 0
+}
 
 src_prepare() {
-	epatch "${FILESDIR}"/${PN}-3.1.9-static-pc.patch
+	default
 
 	if use static-libs ; then
 		cp -pPR "${S}" "${S}.static" || die
+		mv "${S}.static" "${S}/static" || die
 	fi
+
+	multilib_copy_sources
+}
+
+multilib_src_configure() {
+	append-lfs-flags #471102
 }
 
 pemake() {
@@ -39,7 +68,10 @@ pemake() {
 		HOST="${CHOST}" \
 		CROSS_COMPILE="${CHOST}-" \
 		CC="$(tc-getCC)" \
-		DNS="yes" \
+		AR="$(tc-getAR)" \
+		PKG_CONFIG="$(tc-getPKG_CONFIG)" \
+		RANLIB="$(tc-getRANLIB)" \
+		DNS=$(usex dns) \
 		IDSDIR='$(SHAREDIR)/misc' \
 		MANDIR='$(SHAREDIR)/man' \
 		PREFIX="${EPREFIX}/usr" \
@@ -49,24 +81,28 @@ pemake() {
 		PCI_COMPRESSED_IDS=0 \
 		PCI_IDS=pci.ids \
 		LIBDIR="\${PREFIX}/$(get_libdir)" \
-		LIBKMOD="$(usex kmod)" \
+		LIBKMOD=$(multilib_native_usex kmod) \
+		HWDB=$(usex udev) \
 		"$@"
 }
 
-src_compile() {
+multilib_src_compile() {
 	pemake OPT="${CFLAGS}" all
 	if use static-libs ; then
 		pemake \
-			-C "${S}.static" \
+			-C "${BUILD_DIR}/static" \
 			OPT="${CFLAGS}" \
 			SHARED="no" \
 			lib/libpci.a
 	fi
 }
 
-src_install() {
+multilib_src_install() {
 	pemake DESTDIR="${D}" install install-lib
-	use static-libs && dolib.a "${S}.static/lib/libpci.a"
+	use static-libs && dolib.a "${BUILD_DIR}/static/lib/libpci.a"
+}
+
+multilib_src_install_all() {
 	dodoc ChangeLog README TODO
 
 	rm "${ED}"/usr/sbin/update-pciids "${ED}"/usr/share/misc/pci.ids \
